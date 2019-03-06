@@ -9,31 +9,9 @@
 #include "Arduino.h"
 #include <ThreadController.h>
 #include "config.h"
-#include "controller.h"
+#include "module.h"
+#include "sensor-proximity.h"
 
-/**
- * Every class registered in the sensors must be inherited by this class Sensor
- * with a calibration function and a sensor id
- */
-class Sensor
-{
-  public:
-    /**
-     * Function to be called to calibrate a sensor
-     * Abstract class
-     */
-    virtual calibrate() = 0;
-    /**
-     * Function to be get the sensor id
-     * Abstract class
-     */
-    virtual getSensorId() = 0;
-  private:
-    /**
-     * Internal variable for the sensor id
-     */
-    unsigned int _sensorId;
-};
 
 
 /**
@@ -49,7 +27,8 @@ class Sensors: public Thread, public Module
     /**
      * Constructor
      */
-    Sensors(Sensor *sensorProximityList, unsigned int sensorProximityCount,
+    Sensors(SensorProximity *sensorProximityList,
+            unsigned int sensorProximityCount,
             void (*callback)(void) = 0,
             unsigned long _interval = 0);
     /**
@@ -66,17 +45,29 @@ class Sensors: public Thread, public Module
      * Calibrate all the sensors
      */
     void calibrate();
+    /**
+     * Get proximity sensor value for sensor id
+     */
+    unsigned int getProximityValue(unsigned int sensorId);
+    /**
+     * Check if the threshold has been passed and a flag is raise for sensor id
+     */
+    unsigned int hasProximityFlagRaised(unsigned int sensorId);
 
   private:
 
     /**
      * A list of all registered proximity sensors
      */
-    Sensor *_sensorProximityList;
+    SensorProximity *_sensorProximityList;
     /**
      * Number of all registered proximity sensors
      */
     unsigned int _sensorProximityCount;
+    /**
+     * Get proximity sensor for sensor id
+     */
+    SensorProximity* _getProximitySensor(unsigned int sensorId);
 
     /**
      * The overrode run function of the Thread class, being called at a fix

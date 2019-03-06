@@ -10,42 +10,7 @@
 #include <Thread.h>
 #include <ThreadController.h>
 #include "config.h"
-
-/**
- * The possible states of the robot can have
- */
-enum State
-{
-  s_initialize,       // Initialization state, only active during set up
-  s_run,
-  s_turn,
-  s_wait,
-  s_panic             // Panic state, when something unexpected happened
-};
-
-/**
- * Every class depending on state must be inherited by this class
- * exitState and enterState are getting called during a state transition
- */
-class Module
-{
-  public:
-    /**
-     * Function being called when the module should prepare to exit a state
-     * Abstract class
-     */
-    virtual exitState(State exitState) = 0;
-    /**
-     * Function being called when the module should enter a new state
-     * Abstract class
-     */
-    virtual enterState(State enterState) = 0;
-  private:
-    /**
-     * Internal variable for the current state
-     */
-    State _state = s_initialize;
-};
+#include "sensors.h"
 
 
 /**
@@ -54,16 +19,21 @@ class Module
 class Controller: public Thread
 {
   public:
-    
+
     /**
      * Constructor
      */
-    Controller(void (*callback)(void) = NULL, unsigned long _interval = 0);
+    Controller(Sensors *sensors, void (*callback)(void) = NULL, unsigned long _interval = 0);
 
     /**
      * Start the robot
      */
     void start();
+
+    /**
+     * Get the current state
+     */
+    State getState();
 
   private:
 
@@ -71,6 +41,11 @@ class Controller: public Thread
      * Internal variable for the current state
      */
     State _state = s_initialize;
+
+    /**
+     * Sensors of the robot
+     */
+    Sensors *_sensors;
 
     /**
      * Logging function used to log repeatedly values

@@ -5,9 +5,12 @@
 
 #include "Arduino.h"
 #include "sensors.h"
+#include "sensor.h"
+#include "sensor-proximity.h"
 
 
-Sensors::Sensors( Sensor *sensorProximityList, unsigned int sensorProximityCount,
+Sensors::Sensors( SensorProximity *sensorProximityList,
+                  unsigned int sensorProximityCount,
                   void (*callback)(void),
                   unsigned long _interval) : Thread(callback, _interval)
 {
@@ -36,6 +39,44 @@ Sensors::exitState(State state)
 Sensors::enterState(State state)
 {
 
+}
+
+unsigned int Sensors::getProximityValue(unsigned int sensorId)
+{
+  SensorProximity *s = _getProximitySensor(sensorId);
+  if (s == nullptr)
+  {
+    return 0;
+  }
+  else
+  {
+    return s->getValue();
+  }
+}
+
+unsigned int Sensors::hasProximityFlagRaised(unsigned int sensorId)
+{
+  SensorProximity *s = _getProximitySensor(sensorId);
+  if (s == nullptr)
+  {
+    return 0;
+  }
+  else
+  {
+    return s->hasFlagRaised();
+  }
+}
+
+SensorProximity* Sensors::_getProximitySensor(unsigned int sensorId)
+{
+  for (unsigned int i = 0; i<_sensorProximityCount; i++)
+  {
+    if (_sensorProximityList[i].getSensorId() == sensorId)
+    {
+      return &_sensorProximityList[i];
+    }
+  }
+  return nullptr;
 }
 
 void Sensors::run()
