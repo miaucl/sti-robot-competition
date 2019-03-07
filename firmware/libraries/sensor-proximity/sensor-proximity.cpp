@@ -9,9 +9,7 @@ sensor-proximity.h - The proximity sensor of the robot
 
 SensorProximity::SensorProximity( unsigned int sensorId,
                                   unsigned int pin,
-                                  unsigned int threshold = 0,
-                                  void (*callback)(void),
-                                  unsigned long _interval) : Thread(callback, _interval)
+                                  unsigned int threshold = 0)
 {
   // Sensor initialize message
   #ifdef SERIAL_ENABLE
@@ -24,12 +22,8 @@ SensorProximity::SensorProximity( unsigned int sensorId,
   _sensorId = sensorId;
   // Save the pin
   _pin = pin;
-  // Save the theshold
-  theshold = theshold;
-
-
-  // Set the frequency
-  setInterval(SENSOR_PROXIMITY_FREQUENCY);
+  // Save the threshold
+  threshold = threshold;
 }
 
 unsigned int SensorProximity::getValue()
@@ -50,12 +44,15 @@ boolean SensorProximity::hasFlagRaised()
 {
   unsigned int averageMeasurement = getValue();
 
-  return (averageMeasurement > _ambient + _ambientVariance + FLAG_THRESHOLD);
+  return (averageMeasurement > _ambient + _ambientVariance + threshold);
 }
 
 
-void SensorProximity::run()
+void SensorProximity::run(unsigned long now)
 {
+  // Save current execution timestamp
+  _lastRunned = now;
+
   // Read the value from the analog sensor
   unsigned int measurement = analogRead(_pin);
 
@@ -65,22 +62,19 @@ void SensorProximity::run()
   {
     _measurementIndex = 0;
   }
-
-  // Release thread
-  runned();
 }
 
-SensorProximity::exitState(State state)
+void SensorProximity::exitState(State state)
 {
 
 }
 
-SensorProximity::enterState(State state)
+void SensorProximity::enterState(State state)
 {
 
 }
 
-SensorProximity::calibrate()
+void SensorProximity::calibrate()
 {
   // Sensor calibration message
   #ifdef SERIAL_ENABLE
@@ -100,8 +94,6 @@ SensorProximity::calibrate()
     delay(10); // Wait for 10 milliseconds between each measurement
   }
   _ambient /= CALIBRATION_COUNT;
-  Serial.print("Ambient: ");
-  Serial.println(_ambient);
 
 
   for (unsigned int i = 0; i<CALIBRATION_COUNT; i++)
@@ -110,12 +102,14 @@ SensorProximity::calibrate()
   }
   _ambientVariance /= CALIBRATION_COUNT;
   _ambientVariance *= 2;
-
-  Serial.print("Ambient Variance: ");
-  Serial.println(_ambientVariance);
 }
 
-SensorProximity::getSensorId()
+unsigned int SensorProximity::getSensorId()
 {
   return _sensorId;
+}
+
+unsigned long SensorProximity::getLastRunned()
+{
+  return _lastRunned;
 }

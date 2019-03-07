@@ -7,18 +7,16 @@
 #include "controller.h"
 
 
-Controller::Controller(Sensors *sensors, void (*callback)(void), unsigned long _interval) : Thread(callback, _interval)
+Controller::Controller(SensorProximity *sensorProximityList, SensorTimeOfFlight *sensorTimeOfFlightList)
 {
   // Controller initialize message
   #ifdef SERIAL_ENABLE
   Serial.println("Init Controller …");
   #endif
 
-  // Save the sensors
-  _sensors = sensors;
-
-  // Set the frequency
-  setInterval(CONTROLLER_FREQUENCY);
+  // Save sensors
+  _sensorProximityList = sensorProximityList;
+  _sensorTimeOfFlightList = sensorTimeOfFlightList;
 }
 
 void Controller::start()
@@ -36,43 +34,41 @@ void Controller::logging()
 {
   #ifdef SERIAL_ENABLE
   // State
-  Serial.print("State:\t");
-  switch (getState())
-  {
-    case s_initialize: Serial.print("INITIALIZE"); break;
-    case s_run: Serial.print("RUN");
-  }
-  Serial.print("\t");
+  // Serial.print("State:\t");
+  // switch (getState())
+  // {
+  //   case s_initialize: Serial.print("INIT"); break;
+  //   case s_run: Serial.print("RUN");
+  // }
+  // Serial.print("\t");
+  //
+  // // Proximity thresholds
+  // Serial.print("Prox THs:\t");
+  // if (_sensorProximityList[SENSOR_PROXIMITY_HORIZONTAL_OFFSET + SENSOR_PROXIMITY_RIGHT].hasFlagRaised()) Serial.print("R ");
+  // if (_sensorProximityList[SENSOR_PROXIMITY_HORIZONTAL_OFFSET + SENSOR_PROXIMITY_FORWARD_RIGHT].hasFlagRaised()) Serial.print("FR ");
+  // if (_sensorProximityList[SENSOR_PROXIMITY_HORIZONTAL_OFFSET + SENSOR_PROXIMITY_FORWARD].hasFlagRaised()) Serial.print("F ");
+  // if (_sensorProximityList[SENSOR_PROXIMITY_HORIZONTAL_OFFSET + SENSOR_PROXIMITY_FORWARD_LEFT].hasFlagRaised()) Serial.print("FL ");
+  // if (_sensorProximityList[SENSOR_PROXIMITY_HORIZONTAL_OFFSET + SENSOR_PROXIMITY_LEFT].hasFlagRaised()) Serial.print("L ");
+  // if (_sensorProximityList[SENSOR_PROXIMITY_HORIZONTAL_OFFSET + SENSOR_PROXIMITY_BACKWARD].hasFlagRaised()) Serial.print("B ");
 
-  // Proximity thresholds
-  Serial.print("Prox THs:\t");
-  if (_sensors->hasProximityFlagRaised(SENSOR_PROXIMITY_RIGHT)) Serial.print("R ");
-  if (_sensors->hasProximityFlagRaised(SENSOR_PROXIMITY_FORWARD_RIGHT)) Serial.print("FR ");
-  if (_sensors->hasProximityFlagRaised(SENSOR_PROXIMITY_FORWARD)) Serial.print("F ");
-  if (_sensors->hasProximityFlagRaised(SENSOR_PROXIMITY_FORWARD_LEFT)) Serial.print("FL ");
-  if (_sensors->hasProximityFlagRaised(SENSOR_PROXIMITY_LEFT)) Serial.print("L ");
-  if (_sensors->hasProximityFlagRaised(SENSOR_PROXIMITY_BACKWARD)) Serial.print("B ");
+  // Time-of-flight thresholds
+  // Serial.print("TOF THs:\t");
+  // Serial.println(_sensorTimeOfFlightList[SENSOR_TIME_OF_FLIGHT_RIGHT].getValue());
 
 
-  Serial.println("");
+  // Serial.println("");
 
 
   #endif
 }
 
-void Controller::run()
+void Controller::run(unsigned long now)
 {
+  // Save current execution timestamp
+  _lastRunned = now;
+
   // Log values
 	logging();
-
-  // Serial.println(_sensors->getProximityValue(SENSOR_PROXIMITY_RIGHT));
-  // if (_sensors->hasProximityFlagRaised(SENSOR_PROXIMITY_RIGHT))
-  // {
-  //   Serial.println("FLAG");
-  // }
-
-  // Release thread
-  runned();
 }
 
 void Controller::setState(State newState)
@@ -86,4 +82,9 @@ void Controller::setState(State newState)
   #endif
 
   _state = newState;
+}
+
+unsigned long Controller::getLastRunned()
+{
+  return _lastRunned;
 }

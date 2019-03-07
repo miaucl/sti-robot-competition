@@ -10,8 +10,8 @@
  Some code and wiring inspired by http://en.wikiversity.org/wiki/User:Dstaub/robotcar
  */
 
-#define trigPin 7
-#define echoPin 6
+#define trigPin 52
+#define echoPin 53
 #define led 11
 #define led2 10
 
@@ -35,8 +35,8 @@ void loop() {
   distance = (duration/2) / 29.1;
   if (distance < 4) {  // This is where the LED On/Off happens
     digitalWrite(led,HIGH); // When the Red condition is met, the Green LED should turn off
-  digitalWrite(led2,LOW);
-}
+    digitalWrite(led2,LOW);
+  }
   else {
     digitalWrite(led,LOW);
     digitalWrite(led2,HIGH);
@@ -48,5 +48,5 @@ void loop() {
     Serial.print(distance);
     Serial.println(" cm");
   }
-  delay(100);
+  delay(50);
 }

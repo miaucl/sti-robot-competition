@@ -7,23 +7,22 @@
 #define Controller_h
 
 #include "Arduino.h"
-#include <Thread.h>
-#include <ThreadController.h>
 #include "config.h"
-#include "sensors.h"
+#include "sensor-proximity.h"
+#include "sensor-time-of-flight.h"
 
 
 /**
- * The controller class inheriting Thread
+ * The controller class
  */
-class Controller: public Thread
+class Controller
 {
   public:
 
     /**
      * Constructor
      */
-    Controller(Sensors *sensors, void (*callback)(void) = NULL, unsigned long _interval = 0);
+    Controller(SensorProximity *sensorProximityList, SensorTimeOfFlight *sensorTimeOfFlightList);
 
     /**
      * Start the robot
@@ -35,7 +34,21 @@ class Controller: public Thread
      */
     State getState();
 
+    /**
+     * Get the last time the it has runned
+     */
+    unsigned long getLastRunned();
+    /**
+     * The run function depending on the period
+     */
+    void run(unsigned long now);
+
   private:
+
+    /**
+     * The last time it runned
+     */
+    unsigned long _lastRunned = 0;
 
     /**
      * Internal variable for the current state
@@ -43,25 +56,24 @@ class Controller: public Thread
     State _state = s_initialize;
 
     /**
-     * Sensors of the robot
-     */
-    Sensors *_sensors;
-
-    /**
      * Logging function used to log repeatedly values
      */
     void logging();
 
     /**
-     * The overrode run function of the Thread class, being called at a fix
-     * frequency rate.
-     */
-    void run() override;
-
-    /**
      * Make a state transition from current _state to newState
      */
     void setState(State newState);
+
+    /**
+     * The proximity sensors
+     */
+    SensorProximity *_sensorProximityList;
+
+    /**
+     * The time-of-flight sensors
+     */
+    SensorTimeOfFlight *_sensorTimeOfFlightList;
 };
 
 #endif

@@ -1,33 +1,34 @@
 /*
-  sensor-proximity.h - The proximity sensor of the robot
+  sensor-time-of-flight.h - The time-of-flight sensor of the robot
   Created by Cyrill Lippuner, 2019.
 */
 
-#ifndef Sensor_Proximity_h
-#define Sensor_Proximity_h
+#ifndef Sensor_TimeOfFlight_h
+#define Sensor_TimeOfFlight_h
 
 #include "Arduino.h"
 #include "config.h"
 
 /* The number of measurements to use for averaging */
-#define MEASUREMENT_COUNT 10
+#define MEASUREMENT_COUNT 5
 
-/* The number of measurements to use for calibration */
-#define CALIBRATION_COUNT 32
+/* The max distance the sensor can (should) mesure */
+#define MEASUREMENT_MAX_DISTANCE 180
 
 /**
  * The sensors class inheriting Thread and Module
- * It detects the proximity value for a sensors
+ * It detects the time-of-flight value for a sensors
  */
-class SensorProximity
+class SensorTimeOfFlight
 {
   public:
     /**
      * Constructor
      */
-     SensorProximity( unsigned int sensorId,
-                      unsigned int pin,
-                      unsigned int threshold = 0);
+     SensorTimeOfFlight(unsigned int sensorId,
+                        unsigned int triggerPin,
+                        unsigned int echoPin,
+                        unsigned int threshold = 0);
     /**
      * Exit a state.
      */
@@ -65,6 +66,10 @@ class SensorProximity
      * The run function depending on the period
      */
     void run(unsigned long now);
+    /**
+     * The run function executed asap
+     */
+    void loop();
 
   private:
 
@@ -84,19 +89,29 @@ class SensorProximity
     unsigned long _lastRunned;
 
     /**
-     * Internal variable for the pin to read the analog value for the proximity
+     * Internal variable for the trigger pin to send the signal
      */
-    unsigned int _pin;
+    unsigned int _triggerPin;
 
     /**
-     * The ambient light determined at calibration
+     * Internal variable for the echo pin to read the signal
      */
-    long _ambient;
+    unsigned int _echoPin;
 
     /**
-     * The variance ambient light determined at calibration
+     * Flag for the interrupt that a signal should come
      */
-    long _ambientVariance;
+    boolean _waitingForEcho = false;
+
+    /**
+     * The millis read for the trigger
+     */
+    unsigned long _triggerMillis = 0;
+
+    /**
+     * The millis read for the echo in the hardware interrupt
+     */
+    unsigned long _echoMillis = 0;
 
     /**
      * Internal array for averaging measurements
