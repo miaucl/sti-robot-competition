@@ -5,8 +5,6 @@
 #ifndef Config_h
 #define Config_h
 
-#include "Arduino.h"
-
 /**
  * MACROS
  */
@@ -52,6 +50,10 @@
 #define BTN_START 1
 #define BTN_PAUSE 2
 
+#define LED_COUNT 2
+#define LED_SYSTEM 0
+#define LED_RUNNING 1
+
 
 /* PINs */
 #define TESTLED 13
@@ -68,14 +70,18 @@
 
 #define SENSOR_TOF_RIGHT_TRIGGER_PIN 52
 #define SENSOR_TOF_RIGHT_ECHO_PIN 53
-#define SENSOR_TOF_RIGHT_TRIGGER_PIN 54
-#define SENSOR_TOF_RIGHT_ECHO_PIN 55
-#define SENSOR_TOF_RIGHT_TRIGGER_PIN 56
-#define SENSOR_TOF_RIGHT_ECHO_PIN 57
+#define SENSOR_TOF_CENTER_TRIGGER_PIN 54
+#define SENSOR_TOF_CENTER_ECHO_PIN 55
+#define SENSOR_TOF_LEFT_TRIGGER_PIN 56
+#define SENSOR_TOF_LEFT_ECHO_PIN 57
 
-#define BTN_RESET 22
-#define BTN_START 23
-#define BTN_PAUSE 24
+#define GLOBAL_PAUSE_BTN 22
+#define GLOBAL_PAUSE_LED 10
+
+#define BTN_START_PIN 23
+
+#define LED_SYSTEM_PIN 12
+#define LED_RUNNING_PIN 11
 
 
 /**
@@ -83,7 +89,10 @@
  */
 enum State
 {
-  s_initialize,       // Initialization state, only active during set up
+  s_initialization,       // Initialization state, only active during set up
+  s_calibration,          // Calibrate all sensors and actuators
+  s_idle,                 // Idle state, waiting for start
+  s_test,                 // Testing state
   s_run,
   s_turn,
   s_wait,
