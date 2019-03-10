@@ -1,8 +1,12 @@
-#include <config.h>
-#include <utils.h>
-#include <state-machine.h>
-#include <sensors.h>
-#include <leds.h>
+#include "I2Cdev.h"
+#if I2CDEV_IMPLEMENTATION == I2CDEV_ARDUINO_WIRE
+    #include "Wire.h"
+#endif
+#include "config.h"
+#include "utils.h"
+#include "state-machine.h"
+#include "sensors.h"
+#include "leds.h"
 
 /*********
  * Global values
@@ -26,6 +30,11 @@ int proximityMeasurementIndex[SENSOR_PROXIMITY_COUNT] = {0};
 int tofMeasurements[SENSOR_TOF_COUNT][SENSOR_TOF_MEASUREMENT_COUNT] = {0};
 int tofMeasurementIndex[SENSOR_TOF_COUNT] = {0};
 
+// The measurements for the imu sensors
+float imuOffsetMeasurements[SENSOR_IMU_MEASUREMENT_DIMENSIONS] = {0};
+float imuMeasurements[SENSOR_IMU_MEASUREMENT_DIMENSIONS][SENSOR_IMU_MEASUREMENT_COUNT] = {0};
+int imuMeasurementIndex = {0};
+
 // The buttons for control
 boolean btnState[BTN_COUNT] = {0};
 
@@ -37,6 +46,14 @@ boolean ledState[LED_COUNT] = {0};
  * Initialization
  */
 void setup() {
+  // join I2C bus (I2Cdev library doesn't do this automatically)
+  #if I2CDEV_IMPLEMENTATION == I2CDEV_ARDUINO_WIRE
+    Wire.begin();
+    TWBR = 24; // 400kHz I2C clock (200kHz if CPU is 8MHz)
+  #elif I2CDEV_IMPLEMENTATION == I2CDEV_BUILTIN_FASTWIRE
+    Fastwire::setup(400, true);
+  #endif
+    
   #ifdef SERIAL_ENABLE
   // Setup serial communication
   Serial.begin(SERIAL_BAUD_RATE);
@@ -75,6 +92,8 @@ void configuration()
   configureProximity(proximityAmbientMeasurements, proximityAmbientVarianceMeasurements, SENSOR_PROXIMITY_DETECT_LEFT, SENSOR_PROXIMITY_DETECT_LEFT_PIN);
   
   configureTOF(SENSOR_TOF_RIGHT, SENSOR_TOF_RIGHT_TRIGGER_PIN, SENSOR_TOF_RIGHT_ECHO_PIN);
+
+  configureIMU(SENSOR_IMU_SDA_PIN, SENSOR_IMU_SCL_PIN, SENSOR_IMU_INT_PIN);
 
   configureBtns();
 
@@ -187,7 +206,7 @@ void stateCalibrationEnterRoutine()
 void stateCalibrationRoutine()
 {
   #ifdef SERIAL_ENABLE
-  Serial.println("Calibrete Sensors");
+  Serial.println("Calibrate Sensors");
   #endif
 
   delay(200);
@@ -203,6 +222,7 @@ void stateCalibrationRoutine()
   calibrateProximity(proximityAmbientMeasurements, proximityAmbientVarianceMeasurements, SENSOR_PROXIMITY_DETECT_RIGHT, SENSOR_PROXIMITY_DETECT_RIGHT_PIN);
   calibrateProximity(proximityAmbientMeasurements, proximityAmbientVarianceMeasurements, SENSOR_PROXIMITY_DETECT_LEFT, SENSOR_PROXIMITY_DETECT_LEFT_PIN);
   calibrateTOF(SENSOR_TOF_RIGHT, SENSOR_TOF_RIGHT_TRIGGER_PIN, SENSOR_TOF_RIGHT_ECHO_PIN);
+  calibrateIMU(imuOffsetMeasurements);
 
   readBtns(btnState);
 }
@@ -246,8 +266,8 @@ void stateTestRoutine()
   readProximity(proximityMeasurements, proximityMeasurementIndex, SENSOR_PROXIMITY_DOWN_LEFT, SENSOR_PROXIMITY_DOWN_LEFT_PIN);
   readProximity(proximityMeasurements, proximityMeasurementIndex, SENSOR_PROXIMITY_DETECT_RIGHT, SENSOR_PROXIMITY_DETECT_RIGHT_PIN);
   readProximity(proximityMeasurements, proximityMeasurementIndex, SENSOR_PROXIMITY_DETECT_LEFT, SENSOR_PROXIMITY_DETECT_LEFT_PIN);
-
   readTOF(tofMeasurements, tofMeasurementIndex, SENSOR_TOF_RIGHT, SENSOR_TOF_RIGHT_TRIGGER_PIN, SENSOR_TOF_RIGHT_ECHO_PIN);
+  readIMU(imuMeasurements, imuMeasurementIndex);
 }
 
 void stateTestExitRoutine()

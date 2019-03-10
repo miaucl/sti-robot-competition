@@ -7,6 +7,9 @@
 #include "config.h"
 #include "utils.h"
 
+#include "MPU6050_6Axis_MotionApps20.h"
+
+
 /*************/
 /* Proximity */
 /*************/
@@ -194,6 +197,268 @@ boolean checkTOFThreshold(int tofMeasurements[SENSOR_TOF_COUNT][SENSOR_TOF_MEASU
 
   return (medianMeasurement > 0);
 }
+
+
+/*******/
+/* IMU */
+/*******/
+
+/**
+ * The IMU sensor object
+ */
+MPU6050 mpu;
+
+
+bool dmpReady = false;  // set true if DMP init was successful
+uint8_t mpuIntStatus;   // holds actual interrupt status byte from MPU
+uint8_t devStatus;      // return status after each device operation (0 = success, !0 = error)
+uint16_t packetSize;    // expected DMP packet size (default is 42 bytes)
+uint16_t fifoCount;     // count of all bytes currently in FIFO
+uint8_t fifoBuffer[64]; // FIFO storage buffer
+
+// ================================================================
+// ===               INTERRUPT DETECTION ROUTINE                ===
+// ================================================================
+
+volatile bool mpuInterrupt = false;     // indicates whether MPU interrupt pin has gone high
+void dmpDataReady()
+{
+  mpuInterrupt = true;
+}
+
+
+void configureIMU(int i2cDataPin,
+                  int i2cClockPin,
+                  int interruptPin)
+{
+  // Initialize and configure imu device
+  #ifdef SERIAL_ENABLE
+  Serial.print("Configure Sensor 'IMU' on interrupt pin '");
+  Serial.print(interruptPin);
+  Serial.println("'");
+  #endif
+  mpu.initialize();
+
+  // Verify connection
+  #ifdef SERIAL_ENABLE
+  Serial.print(">Testing imu sensor connection > ");
+  Serial.println(mpu.testConnection() ? "MPU6050 connection successful" : "MPU6050 connection failed");
+  #else
+  mpu.testConnection();
+  #endif
+
+  // Load and configure the DMP
+  devStatus = mpu.dmpInitialize();
+
+  // Wait a bit
+  delay(200);
+
+  /*
+  mpu.setXGyroOffset(220);
+  mpu.setYGyroOffset(76);
+  mpu.setZGyroOffset(-85);
+  mpu.setZAccelOffset(1788);
+  */
+
+  if (devStatus == 0)
+  {
+    // turn on the DMP, now that it's ready
+    #ifdef SERIAL_ENABLE
+    Serial.println(">Enabling DMP …");
+    #endif
+    mpu.setDMPEnabled(true);
+
+    // enable Arduino interrupt detection
+    #ifdef SERIAL_ENABLE
+    Serial.println(">Enabling interrupt detection (Arduino external interrupt 0) …");
+    #endif
+    attachInterrupt(digitalPinToInterrupt(interruptPin), dmpDataReady, RISING);
+    mpuIntStatus = mpu.getIntStatus();
+
+    // set our DMP Ready flag so the main loop() function knows it's okay to use it
+    dmpReady = true;
+
+    // get expected DMP packet size for later comparison
+    packetSize = mpu.dmpGetFIFOPacketSize();
+  }
+  else
+  {
+    // ERROR!
+    // 1 = initial memory load failed
+    // 2 = DMP configuration updates failed
+    // (if it's going to break, usually the code will be 1)
+    #ifdef SERIAL_ENABLE
+    Serial.print("#### DMP Initialization failed (code ");
+    Serial.print(devStatus);
+    Serial.println(")");
+    #endif
+  }
+}
+
+void calibrateIMU(float imuOffsetMeasurements[SENSOR_IMU_MEASUREMENT_DIMENSIONS])
+{
+  Quaternion q;
+  VectorFloat gravity;
+  float ypr[SENSOR_IMU_MEASUREMENT_DIMENSIONS];
+
+
+  // Wait until the IMU has stabelized
+  #ifdef SERIAL_ENABLE
+  Serial.print("Calibrating");
+  #endif
+
+  for (int i = 0; i<10; i++)
+  {
+    #ifdef SERIAL_ENABLE
+    Serial.print(".");
+    #endif
+    delay(300);
+  }
+  #ifdef SERIAL_ENABLE
+  Serial.println(" Done!");
+  #endif
+
+  // if programming failed, don't try to do anything
+  if (!dmpReady) return;
+
+  for (int i = 0; i<SENSOR_IMU_MEASUREMENT_COUNT;)
+  {
+    // Wait for data
+    while (!mpuInterrupt && fifoCount < packetSize);
+
+    // reset interrupt flag and get INT_STATUS byte
+    mpuInterrupt = false;
+    mpuIntStatus = mpu.getIntStatus();
+
+    // get current FIFO count
+    fifoCount = mpu.getFIFOCount();
+
+    // check for overflow (this should never happen unless our code is too inefficient)
+    // May happen due to other setup, clear and retry
+    if ((mpuIntStatus & 0x10) || fifoCount == 1024)
+    {
+      // reset so we can continue cleanly
+      mpu.resetFIFO();
+      #ifdef SERIAL_ENABLE
+      Serial.println("FIFO overflow > Clean and retry …");
+      #endif
+    // otherwise, check for DMP data ready interrupt (this should happen frequently)
+    }
+    else if (mpuIntStatus & 0x02)
+    {
+      // wait for correct available data length, should be a VERY short wait
+      while (fifoCount < packetSize) fifoCount = mpu.getFIFOCount();
+
+      // read a packet from FIFO
+      mpu.getFIFOBytes(fifoBuffer, packetSize);
+
+      // track FIFO count here in case there is > 1 packet available
+      // (this lets us immediately read more without waiting for an interrupt)
+      fifoCount -= packetSize;
+
+      // display YPR angles in degrees
+      mpu.dmpGetQuaternion(&q, fifoBuffer);
+      mpu.dmpGetGravity(&gravity, &q);
+      mpu.dmpGetYawPitchRoll(ypr, &q, &gravity);
+
+      for (int j = 0; j<SENSOR_IMU_MEASUREMENT_DIMENSIONS; j++)
+      {
+        imuOffsetMeasurements[j] += ypr[j] * 180/M_PI;
+      }
+
+      #ifdef SERIAL_ENABLE
+      Serial.print("ypr\t");
+      Serial.print(ypr[0] * 180/M_PI);
+      Serial.print("\t");
+      Serial.print(ypr[1] * 180/M_PI);
+      Serial.print("\t");
+      Serial.println(ypr[2] * 180/M_PI);
+      #endif
+
+      i++;
+    }
+  }
+
+  // Calculate the offset
+  for (int j = 0; j<SENSOR_IMU_MEASUREMENT_DIMENSIONS; j++)
+  {
+    imuOffsetMeasurements[j] /= SENSOR_IMU_MEASUREMENT_COUNT;
+  }
+
+  #ifdef SERIAL_ENABLE
+  Serial.print("ypr offset\t");
+  Serial.print(imuOffsetMeasurements[0]);
+  Serial.print("\t");
+  Serial.print(imuOffsetMeasurements[1]);
+  Serial.print("\t");
+  Serial.println(imuOffsetMeasurements[2]);
+  #endif
+
+
+  // Reset the FIFO
+  mpu.resetFIFO();
+}
+
+
+void readIMU( float imuMeasurements[SENSOR_IMU_MEASUREMENT_DIMENSIONS][SENSOR_IMU_MEASUREMENT_COUNT],
+              int *imuMeasurementIndex)
+{
+  // if programming failed, don't try to do anything
+  if (!dmpReady) return;
+
+  // Wait for data
+  if (!mpuInterrupt && fifoCount < packetSize) return;
+
+  Quaternion q;
+  VectorFloat gravity;
+  float ypr[3];
+
+  // reset interrupt flag and get INT_STATUS byte
+  mpuInterrupt = false;
+  mpuIntStatus = mpu.getIntStatus();
+
+  // get current FIFO count
+  fifoCount = mpu.getFIFOCount();
+
+  // check for overflow (this should never happen unless our code is too inefficient)
+  if ((mpuIntStatus & 0x10) || fifoCount == 1024)
+  {
+    // reset so we can continue cleanly
+    mpu.resetFIFO();
+    #ifdef SERIAL_ENABLE
+    Serial.println("FIFO overflow > Clean and retry …");
+    #endif
+  // otherwise, check for DMP data ready interrupt (this should happen frequently)
+  }
+  else if (mpuIntStatus & 0x02)
+  {
+    // wait for correct available data length, should be a VERY short wait
+    while (fifoCount < packetSize) fifoCount = mpu.getFIFOCount();
+
+    // read a packet from FIFO
+    mpu.getFIFOBytes(fifoBuffer, packetSize);
+
+    // display YPR angles in degrees
+    mpu.dmpGetQuaternion(&q, fifoBuffer);
+    mpu.dmpGetGravity(&gravity, &q);
+    mpu.dmpGetYawPitchRoll(ypr, &q, &gravity);
+    #ifdef SERIAL_ENABLE
+    Serial.print("ypr\t");
+    Serial.print(ypr[0] * 180/M_PI);
+    Serial.print("\t");
+    Serial.print(ypr[1] * 180/M_PI);
+    Serial.print("\t");
+    Serial.print(ypr[2] * 180/M_PI);
+    #endif
+
+    // reset FIFO buffer, as there are more packets available than they can be processed
+    mpu.resetFIFO();
+    fifoCount = mpu.getFIFOCount();
+  }
+}
+
+
+
 
 /***********/
 /* Buttons */

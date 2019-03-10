@@ -81,6 +81,26 @@ int getMedianTOFValue(int tofMeasurements[SENSOR_TOF_COUNT][SENSOR_TOF_MEASUREME
 boolean checkTOFThreshold(int tofMeasurements[SENSOR_TOF_COUNT][SENSOR_TOF_MEASUREMENT_COUNT],
                           int id);
 
+
+/**
+ * Configure the imu sensor
+ */
+void configureIMU(int i2cDataPin,
+                  int i2cClockPin,
+                  int interruptPin);
+
+/**
+ * Calibrate the IMU sensor
+ */
+void calibrateIMU(float imuOffsetMeasurements[SENSOR_IMU_MEASUREMENT_DIMENSIONS]);
+
+
+/**
+ * Read imu sensor values
+ */
+void readIMU( float imuMeasurements[SENSOR_IMU_MEASUREMENT_DIMENSIONS][SENSOR_IMU_MEASUREMENT_COUNT],
+              int *imuMeasurementIndex);
+
 /**
  * Configure the buttons
  */
