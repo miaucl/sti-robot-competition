@@ -14,9 +14,7 @@
 /* Proximity */
 /*************/
 
-void configureProximity(int proximityAmbientMeasurements[SENSOR_PROXIMITY_COUNT],
-                        int proximityAmbientVarianceMeasurements[SENSOR_PROXIMITY_COUNT],
-                        int id,
+void configureProximity(int id,
                         int pin)
 {
   #ifdef SERIAL_ENABLE
@@ -174,7 +172,7 @@ int getMedianTOFValue(int tofMeasurements[SENSOR_TOF_COUNT][SENSOR_TOF_MEASUREME
     sortedMeasurements[i] = tofMeasurements[id][i];
   }
 
-  // Sort valies
+  // Sort values
   int sortedMeasurementsLength = sizeof(sortedMeasurements) / sizeof(sortedMeasurements[0]);
   qsort(sortedMeasurements, sortedMeasurementsLength, sizeof(sortedMeasurements[0]), sort_asc);
 
@@ -442,19 +440,69 @@ void readIMU( float imuMeasurements[SENSOR_IMU_MEASUREMENT_DIMENSIONS][SENSOR_IM
     mpu.dmpGetQuaternion(&q, fifoBuffer);
     mpu.dmpGetGravity(&gravity, &q);
     mpu.dmpGetYawPitchRoll(ypr, &q, &gravity);
-    #ifdef SERIAL_ENABLE
-    Serial.print("ypr\t");
-    Serial.print(ypr[0] * 180/M_PI);
-    Serial.print("\t");
-    Serial.print(ypr[1] * 180/M_PI);
-    Serial.print("\t");
-    Serial.print(ypr[2] * 180/M_PI);
-    #endif
+    // #ifdef SERIAL_ENABLE
+    // Serial.print("ypr\t");
+    // Serial.print(ypr[0] * 180/M_PI);
+    // Serial.print("\t");
+    // Serial.print(ypr[1] * 180/M_PI);
+    // Serial.print("\t");
+    // Serial.print(ypr[2] * 180/M_PI);
+    // #endif
+
+    // Save values
+    imuMeasurements[SENSOR_IMU_YAW][*imuMeasurementIndex] = ypr[0] * 180/M_PI;
+    imuMeasurements[SENSOR_IMU_PITCH][*imuMeasurementIndex] = ypr[1] * 180/M_PI;
+    imuMeasurements[SENSOR_IMU_ROLL][*imuMeasurementIndex] = ypr[2] * 180/M_PI;
+    (*imuMeasurementIndex)++;
+    if (*imuMeasurementIndex >= SENSOR_TOF_MEASUREMENT_COUNT)
+    {
+      *imuMeasurementIndex = 0;
+    }
 
     // reset FIFO buffer, as there are more packets available than they can be processed
     mpu.resetFIFO();
     fifoCount = mpu.getFIFOCount();
   }
+}
+
+/**
+ * Get the median value for the z orientation
+ */
+int getMedianIMUZOrientationValue(int imuMeasurements[SENSOR_IMU_MEASUREMENT_DIMENSIONS][SENSOR_IMU_MEASUREMENT_COUNT])
+{
+  // Calculate the median of the past measurements
+
+  // Copy values
+  int sortedMeasurements[SENSOR_IMU_MEASUREMENT_COUNT] = {0};
+  for (int i = 0; i<SENSOR_IMU_MEASUREMENT_COUNT; i++)
+  {
+    sortedMeasurements[i] = imuMeasurements[SENSOR_IMU_YAW][i];
+  }
+
+  // Sort values
+  int sortedMeasurementsLength = sizeof(sortedMeasurements) / sizeof(sortedMeasurements[0]);
+  qsort(sortedMeasurements, sortedMeasurementsLength, sizeof(sortedMeasurements[0]), sort_asc);
+
+
+  // Take the middle part and average
+  int medianMeasurement = 0;
+  for (int i = SENSOR_IMU_MEASUREMENT_COUNT/3; i<SENSOR_IMU_MEASUREMENT_COUNT - (SENSOR_IMU_MEASUREMENT_COUNT/3); i++)
+  {
+    medianMeasurement += sortedMeasurements[i];
+  }
+  medianMeasurement /= SENSOR_IMU_MEASUREMENT_COUNT - (2 * (SENSOR_IMU_MEASUREMENT_COUNT/3));
+  return medianMeasurement;
+}
+
+
+/**
+ * Check if the z orientation value is over the threshold
+ */
+boolean checkIMUZOrientationThreshold(int imuMeasurements[SENSOR_IMU_MEASUREMENT_DIMENSIONS][SENSOR_IMU_MEASUREMENT_COUNT])
+{
+  int medianMeasurement = getMedianIMUZOrientationValue(imuMeasurements);
+
+  return (abs(medianMeasurement) < SENSOR_IMU_Z_ORIENTATION_THRESHOLD);
 }
 
 

@@ -8,9 +8,7 @@
 /**
  * Configure a proximity sensor
  */
- void configureProximity(int proximityAmbientMeasurements[SENSOR_PROXIMITY_COUNT],
-                         int proximityAmbientVarianceMeasurements[SENSOR_PROXIMITY_COUNT],
-                         int id,
+ void configureProximity(int id,
                          int pin);
 
 /**
@@ -100,6 +98,17 @@ void calibrateIMU(float imuOffsetMeasurements[SENSOR_IMU_MEASUREMENT_DIMENSIONS]
  */
 void readIMU( float imuMeasurements[SENSOR_IMU_MEASUREMENT_DIMENSIONS][SENSOR_IMU_MEASUREMENT_COUNT],
               int *imuMeasurementIndex);
+
+/**
+ * Get the median value for the z orientation
+ */
+int getMedianIMUZOrientationValue(int imuMeasurements[SENSOR_IMU_MEASUREMENT_DIMENSIONS][SENSOR_IMU_MEASUREMENT_COUNT]);
+
+
+/**
+ * Check if the z orientation value is over the threshold
+ */
+boolean checkIMUZOrientationThreshold(int imuMeasurements[SENSOR_IMU_MEASUREMENT_DIMENSIONS][SENSOR_IMU_MEASUREMENT_COUNT]);
 
 /**
  * Configure the buttons
