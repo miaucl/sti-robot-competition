@@ -97,7 +97,8 @@ boolean checkProximityThreshold(int proximityMeasurements[SENSOR_PROXIMITY_COUNT
 {
   int averageMeasurement = getAverageProximityValue(proximityMeasurements, id);
 
-  return (averageMeasurement > proximityAmbientMeasurements[id] + proximityAmbientVarianceMeasurements[id] + SENSOR_PROXIMITY_THRESHOLD);
+  return (averageMeasurement > proximityAmbientMeasurements[id] + proximityAmbientVarianceMeasurements[id] + SENSOR_PROXIMITY_THRESHOLD ||
+          averageMeasurement < proximityAmbientMeasurements[id] - proximityAmbientVarianceMeasurements[id] - SENSOR_PROXIMITY_THRESHOLD);
 }
 
 /*******/
@@ -364,14 +365,14 @@ void calibrateIMU(float imuOffsetMeasurements[SENSOR_IMU_MEASUREMENT_DIMENSIONS]
         imuOffsetMeasurements[j] += ypr[j] * 180/M_PI;
       }
 
-      #ifdef SERIAL_ENABLE
-      Serial.print("ypr\t");
-      Serial.print(ypr[0] * 180/M_PI);
-      Serial.print("\t");
-      Serial.print(ypr[1] * 180/M_PI);
-      Serial.print("\t");
-      Serial.println(ypr[2] * 180/M_PI);
-      #endif
+      // #ifdef SERIAL_ENABLE
+      // Serial.print("ypr\t");
+      // Serial.print(ypr[0]);
+      // Serial.print("\t");
+      // Serial.print(ypr[1]);
+      // Serial.print("\t");
+      // Serial.println(ypr[2]);
+      // #endif
 
       i++;
     }
@@ -397,83 +398,102 @@ void calibrateIMU(float imuOffsetMeasurements[SENSOR_IMU_MEASUREMENT_DIMENSIONS]
   mpu.resetFIFO();
 }
 
-
 void readIMU( float imuMeasurements[SENSOR_IMU_MEASUREMENT_DIMENSIONS][SENSOR_IMU_MEASUREMENT_COUNT],
               int *imuMeasurementIndex)
 {
+  Quaternion q;
+  VectorFloat gravity;
+  float ypr[SENSOR_IMU_MEASUREMENT_DIMENSIONS];
+
   // if programming failed, don't try to do anything
   if (!dmpReady) return;
 
-  // Wait for data
-  if (!mpuInterrupt && fifoCount < packetSize) return;
+  // Reset the FIFO
+  mpu.resetFIFO();
 
-  Quaternion q;
-  VectorFloat gravity;
-  float ypr[3];
-
-  // reset interrupt flag and get INT_STATUS byte
-  mpuInterrupt = false;
-  mpuIntStatus = mpu.getIntStatus();
-
-  // get current FIFO count
-  fifoCount = mpu.getFIFOCount();
-
-  // check for overflow (this should never happen unless our code is too inefficient)
-  if ((mpuIntStatus & 0x10) || fifoCount == 1024)
+  while (1)
   {
-    // reset so we can continue cleanly
-    mpu.resetFIFO();
-    #ifdef SERIAL_ENABLE
-    Serial.println("FIFO overflow > Clean and retry …");
-    #endif
-  // otherwise, check for DMP data ready interrupt (this should happen frequently)
-  }
-  else if (mpuIntStatus & 0x02)
-  {
-    // wait for correct available data length, should be a VERY short wait
-    while (fifoCount < packetSize) fifoCount = mpu.getFIFOCount();
+    // Wait for data
+    while (!mpuInterrupt && fifoCount < packetSize);
 
-    // read a packet from FIFO
-    mpu.getFIFOBytes(fifoBuffer, packetSize);
+    // reset interrupt flag and get INT_STATUS byte
+    mpuInterrupt = false;
+    mpuIntStatus = mpu.getIntStatus();
 
-    // display YPR angles in degrees
-    mpu.dmpGetQuaternion(&q, fifoBuffer);
-    mpu.dmpGetGravity(&gravity, &q);
-    mpu.dmpGetYawPitchRoll(ypr, &q, &gravity);
-    // #ifdef SERIAL_ENABLE
-    // Serial.print("ypr\t");
-    // Serial.print(ypr[0] * 180/M_PI);
-    // Serial.print("\t");
-    // Serial.print(ypr[1] * 180/M_PI);
-    // Serial.print("\t");
-    // Serial.print(ypr[2] * 180/M_PI);
-    // #endif
-
-    // Save values
-    imuMeasurements[SENSOR_IMU_YAW][*imuMeasurementIndex] = ypr[0] * 180/M_PI;
-    imuMeasurements[SENSOR_IMU_PITCH][*imuMeasurementIndex] = ypr[1] * 180/M_PI;
-    imuMeasurements[SENSOR_IMU_ROLL][*imuMeasurementIndex] = ypr[2] * 180/M_PI;
-    (*imuMeasurementIndex)++;
-    if (*imuMeasurementIndex >= SENSOR_TOF_MEASUREMENT_COUNT)
-    {
-      *imuMeasurementIndex = 0;
-    }
-
-    // reset FIFO buffer, as there are more packets available than they can be processed
-    mpu.resetFIFO();
+    // get current FIFO count
     fifoCount = mpu.getFIFOCount();
+
+    // check for overflow (this should never happen unless our code is too inefficient)
+    // May happen due to other setup, clear and retry
+    if ((mpuIntStatus & 0x10) || fifoCount == 1024)
+    {
+      // reset so we can continue cleanly
+      mpu.resetFIFO();
+      #ifdef SERIAL_ENABLE
+      Serial.println("FIFO overflow > Clean and retry …");
+      #endif
+    // otherwise, check for DMP data ready interrupt (this should happen frequently)
+    }
+    else if (mpuIntStatus & 0x02)
+    {
+      // wait for correct available data length, should be a VERY short wait
+      while (fifoCount < packetSize) fifoCount = mpu.getFIFOCount();
+
+      // read a packet from FIFO
+      mpu.getFIFOBytes(fifoBuffer, packetSize);
+
+      // track FIFO count here in case there is > 1 packet available
+      // (this lets us immediately read more without waiting for an interrupt)
+      fifoCount -= packetSize;
+
+      // display YPR angles in degrees
+      mpu.dmpGetQuaternion(&q, fifoBuffer);
+      mpu.dmpGetGravity(&gravity, &q);
+      mpu.dmpGetYawPitchRoll(ypr, &q, &gravity);
+
+      // #ifdef SERIAL_ENABLE
+      // Serial.print("ypr\t");
+      // Serial.print(ypr[0]);
+      // Serial.print("\t");
+      // Serial.print(ypr[1]);
+      // Serial.print("\t");
+      // Serial.println(ypr[2]);
+      // #endif
+
+      imuMeasurements[SENSOR_IMU_YAW][*imuMeasurementIndex] = ypr[0];
+      imuMeasurements[SENSOR_IMU_PITCH][*imuMeasurementIndex] = ypr[1];
+      imuMeasurements[SENSOR_IMU_ROLL][*imuMeasurementIndex] = ypr[2];
+
+      // #ifdef SERIAL_ENABLE
+      // Serial.print("yprs\t");
+      // Serial.print(imuMeasurements[SENSOR_IMU_YAW][*imuMeasurementIndex]);
+      // Serial.print("\t");
+      // Serial.print(imuMeasurements[SENSOR_IMU_PITCH][*imuMeasurementIndex]);
+      // Serial.print("\t");
+      // Serial.println(imuMeasurements[SENSOR_IMU_ROLL][*imuMeasurementIndex]);
+      // #endif
+
+      (*imuMeasurementIndex)++;
+      if (*imuMeasurementIndex >= SENSOR_IMU_MEASUREMENT_COUNT)
+      {
+        *imuMeasurementIndex = 0;
+      }
+
+      break;
+    }
   }
 }
+
 
 /**
  * Get the median value for the z orientation
  */
-int getMedianIMUZOrientationValue(int imuMeasurements[SENSOR_IMU_MEASUREMENT_DIMENSIONS][SENSOR_IMU_MEASUREMENT_COUNT])
+float getMedianIMUZOrientationValue(float imuMeasurements[SENSOR_IMU_MEASUREMENT_DIMENSIONS][SENSOR_IMU_MEASUREMENT_COUNT])
 {
   // Calculate the median of the past measurements
 
   // Copy values
-  int sortedMeasurements[SENSOR_IMU_MEASUREMENT_COUNT] = {0};
+  float sortedMeasurements[SENSOR_IMU_MEASUREMENT_COUNT] = {0};
   for (int i = 0; i<SENSOR_IMU_MEASUREMENT_COUNT; i++)
   {
     sortedMeasurements[i] = imuMeasurements[SENSOR_IMU_YAW][i];
@@ -485,7 +505,7 @@ int getMedianIMUZOrientationValue(int imuMeasurements[SENSOR_IMU_MEASUREMENT_DIM
 
 
   // Take the middle part and average
-  int medianMeasurement = 0;
+  float medianMeasurement = 0;
   for (int i = SENSOR_IMU_MEASUREMENT_COUNT/3; i<SENSOR_IMU_MEASUREMENT_COUNT - (SENSOR_IMU_MEASUREMENT_COUNT/3); i++)
   {
     medianMeasurement += sortedMeasurements[i];
@@ -495,15 +515,6 @@ int getMedianIMUZOrientationValue(int imuMeasurements[SENSOR_IMU_MEASUREMENT_DIM
 }
 
 
-/**
- * Check if the z orientation value is over the threshold
- */
-boolean checkIMUZOrientationThreshold(int imuMeasurements[SENSOR_IMU_MEASUREMENT_DIMENSIONS][SENSOR_IMU_MEASUREMENT_COUNT])
-{
-  int medianMeasurement = getMedianIMUZOrientationValue(imuMeasurements);
-
-  return (abs(medianMeasurement) < SENSOR_IMU_Z_ORIENTATION_THRESHOLD);
-}
 
 
 

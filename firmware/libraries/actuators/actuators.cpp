@@ -29,7 +29,7 @@ void configureMotor(int id,
   Serial.print(id);
   Serial.print("' on pins '");
   Serial.print(directionPin);
-  Serial.println("' and '");
+  Serial.print("' and '");
   Serial.print(speedPin);
   Serial.println("'");
   #endif

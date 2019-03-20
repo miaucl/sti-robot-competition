@@ -102,13 +102,8 @@ void readIMU( float imuMeasurements[SENSOR_IMU_MEASUREMENT_DIMENSIONS][SENSOR_IM
 /**
  * Get the median value for the z orientation
  */
-int getMedianIMUZOrientationValue(int imuMeasurements[SENSOR_IMU_MEASUREMENT_DIMENSIONS][SENSOR_IMU_MEASUREMENT_COUNT]);
+float getMedianIMUZOrientationValue(float imuMeasurements[SENSOR_IMU_MEASUREMENT_DIMENSIONS][SENSOR_IMU_MEASUREMENT_COUNT]);
 
-
-/**
- * Check if the z orientation value is over the threshold
- */
-boolean checkIMUZOrientationThreshold(int imuMeasurements[SENSOR_IMU_MEASUREMENT_DIMENSIONS][SENSOR_IMU_MEASUREMENT_COUNT]);
 
 /**
  * Configure the buttons

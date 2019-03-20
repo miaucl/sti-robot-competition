@@ -8,8 +8,8 @@
 
 void configureLeds()
 {
-  pinMode(LED_RUNNING, OUTPUT);
-  pinMode(LED_SYSTEM, OUTPUT);
+  pinMode(LED_RUNNING_PIN, OUTPUT);
+  pinMode(LED_SYSTEM_PIN, OUTPUT);
 }
 
 // Write the let states
