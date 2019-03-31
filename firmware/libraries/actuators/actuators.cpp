@@ -5,6 +5,7 @@
 
 #include "Arduino.h"
 #include "config.h"
+#include "math.h"
 
 #include <Servo.h>
 #include <AutoPID.h>
@@ -49,16 +50,15 @@ void configureMotor(int id,
   autoPID[id]->reset();
 }
 
-void writeMotorSpeed( boolean motorDirections[ACTUATOR_MOTOR_COUNT],
-                      double motorSpeeds[ACTUATOR_MOTOR_COUNT],
+void writeMotorSpeed( double motorSpeeds[ACTUATOR_MOTOR_COUNT],
                       int id,
                       int directionPin,
                       int speedPin)
 {
   // Save value
-  targetMotorSpeeds[id] = motorSpeeds[id];
+  targetMotorSpeeds[id] = abs(motorSpeeds[id]);
 
-  digitalWrite(directionPin, motorDirections[id]);
+  digitalWrite(directionPin, motorSpeeds[id] < 0);
 }
 
 

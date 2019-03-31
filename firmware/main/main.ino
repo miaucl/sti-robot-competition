@@ -4,10 +4,11 @@
 #endif
 #include "config.h"
 #include "utils.h"
-#include "state-machine.h"
 #include "sensors.h"
 #include "leds.h"
 #include "actuators.h"
+#include "state-machine.h"
+#include "state-wander.h"
 
 /*********
  * Global values
@@ -43,7 +44,6 @@ boolean btnState[BTN_COUNT] = {0};
 boolean ledState[LED_COUNT] = {0};
 
 // The control values for the motor actuators
-boolean motorDirections[ACTUATOR_MOTOR_COUNT] = {0};
 double motorSpeeds[ACTUATOR_MOTOR_COUNT] = {0};
 
 // The angle for the servo actuators
@@ -116,6 +116,15 @@ void configuration()
   configureServo(ACTUATOR_SERVO_BAR_LEFT, ACTUATOR_SERVO_BAR_LEFT_PIN);
 }
 
+
+
+
+
+
+
+
+
+
 /**********
  * Start main loop
  */
@@ -140,7 +149,7 @@ void loop()
 
   // Wait for period
   static long lastPeriodStart = millis();
-  while (millis() - lastPeriodStart < 100) { }
+  while (millis() - lastPeriodStart < 10) { }
   lastPeriodStart = millis();
 
 
@@ -161,19 +170,21 @@ void loop()
     // Exit previous state
     switch (state)
     {
-      case s_initialization: stateInitializationExitRoutine(); break;
-      case s_calibration: stateCalibrationExitRoutine(); break;
-      case s_idle: stateIdleExitRoutine(); break;
-      case s_test: stateTestExitRoutine(); break;
+      case s_initialization: stateInitializationExit(); break;
+      case s_calibration: stateCalibrationExit(); break;
+      case s_idle: stateIdleExit(); break;
+      case s_wander: stateWanderExit(); break;
+      case s_test: stateTestExit(); break;
     }
 
     // Enter next state
     switch (nextState)
     {
-      case s_initialization: stateInitializationEnterRoutine(); break;
-      case s_calibration: stateCalibrationEnterRoutine(); break;
-      case s_idle: stateIdleEnterRoutine(); break;
-      case s_test: stateTestEnterRoutine(); break;
+      case s_initialization: stateInitializationEnter(); break;
+      case s_calibration: stateCalibrationEnter(); break;
+      case s_idle: stateIdleEnter(); break;
+      case s_wander: stateWanderEnter(); break;
+      case s_test: stateTestEnter(); break;
     }
 
     // Set next state
@@ -186,10 +197,11 @@ void loop()
 
   switch (state)
   {
-    case s_initialization: stateInitializationRoutine(); break;
-    case s_calibration: stateCalibrationRoutine(); break;
-    case s_idle: stateIdleRoutine(); break;
-    case s_test: stateTestRoutine(); break;
+    case s_initialization: stateInitialization(); break;
+    case s_calibration: stateCalibration(); break;
+    case s_idle: stateIdle(); break;
+    case s_wander: stateWander(); break;
+    case s_test: stateTest(); break;
   }
 
   // Feedback
@@ -200,30 +212,30 @@ void loop()
   log();
 }
 
-// The "s_initialization" state routines
-void stateInitializationEnterRoutine()
+// The "s_initialization" state s
+void stateInitializationEnter()
 {
   // Do nothing
 }
 
-void stateInitializationRoutine()
+void stateInitialization()
 {
   // Do nothing
 }
 
-void stateInitializationExitRoutine()
+void stateInitializationExit()
 {
   // Do nothing
 }
 
 
-// The "s_calibration" state routine
-void stateCalibrationEnterRoutine()
+// The "s_calibration" state 
+void stateCalibrationEnter()
 {
   ledState[LED_SYSTEM] = HIGH;
 }
 
-void stateCalibrationRoutine()
+void stateCalibration()
 {
   #ifdef SERIAL_ENABLE
   Serial.println("Calibrate Sensors");
@@ -249,37 +261,32 @@ void stateCalibrationRoutine()
   readBtns(btnState);
 }
 
-void stateCalibrationExitRoutine()
+void stateCalibrationExit()
 {
   ledState[LED_SYSTEM] = LOW;
 }
 
-// The "s_idle" state routine
-void stateIdleEnterRoutine()
+// The "s_idle" state 
+void stateIdleEnter()
 {
 }
 
-void stateIdleRoutine()
+void stateIdle()
 {
   readBtns(btnState);
 }
 
-void stateIdleExitRoutine()
+void stateIdleExit()
 {
 }
 
-// The "s_test" state routine
-void stateTestEnterRoutine()
+// The "s_test" state 
+void stateTestEnter()
 {
   ledState[LED_RUNNING] = HIGH;
-
-  motorSpeeds[ACTUATOR_MOTOR_RIGHT] = 0;
-  motorSpeeds[ACTUATOR_MOTOR_LEFT] = 0;
-  writeMotorSpeed(motorDirections, motorSpeeds, ACTUATOR_MOTOR_RIGHT, ACTUATOR_MOTOR_RIGHT_DIRECTION_PIN, ACTUATOR_MOTOR_RIGHT_SPEED_PIN); 
-  writeMotorSpeed(motorDirections, motorSpeeds, ACTUATOR_MOTOR_LEFT, ACTUATOR_MOTOR_LEFT_DIRECTION_PIN, ACTUATOR_MOTOR_LEFT_SPEED_PIN); 
 }
 
-void stateTestRoutine()
+void stateTest()
 {
   readBtns(btnState);
 
@@ -300,64 +307,122 @@ void stateTestRoutine()
 
 
   // Testing
-//  if (Serial.available() > 0) 
-//  {
-//    // read the incoming byte:
-//    char b = Serial.read();
-//
-//    if (b == 49)
-//    {
-//      motorSpeeds[ACTUATOR_MOTOR_RIGHT] = 0;
-//      motorSpeeds[ACTUATOR_MOTOR_LEFT] = 0;
-//      writeMotorSpeed(motorDirections, motorSpeeds, ACTUATOR_MOTOR_RIGHT, ACTUATOR_MOTOR_RIGHT_DIRECTION_PIN, ACTUATOR_MOTOR_RIGHT_SPEED_PIN); 
-//      writeMotorSpeed(motorDirections, motorSpeeds, ACTUATOR_MOTOR_LEFT, ACTUATOR_MOTOR_LEFT_DIRECTION_PIN, ACTUATOR_MOTOR_LEFT_SPEED_PIN); 
-//    }
-//    else if (b == 50)
-//    {
-//      motorSpeeds[ACTUATOR_MOTOR_RIGHT] += 0.1;
-//      motorSpeeds[ACTUATOR_MOTOR_LEFT] += 0.1; 
-//      writeMotorSpeed(motorDirections, motorSpeeds, ACTUATOR_MOTOR_RIGHT, ACTUATOR_MOTOR_RIGHT_DIRECTION_PIN, ACTUATOR_MOTOR_RIGHT_SPEED_PIN); 
-//      writeMotorSpeed(motorDirections, motorSpeeds, ACTUATOR_MOTOR_LEFT, ACTUATOR_MOTOR_LEFT_DIRECTION_PIN, ACTUATOR_MOTOR_LEFT_SPEED_PIN); 
-//    }
-//    else if (b == 51)
-//    {
-//      motorSpeeds[ACTUATOR_MOTOR_RIGHT] -= 0.1;
-//      motorSpeeds[ACTUATOR_MOTOR_LEFT] -= 0.1; 
-//      writeMotorSpeed(motorDirections, motorSpeeds, ACTUATOR_MOTOR_RIGHT, ACTUATOR_MOTOR_RIGHT_DIRECTION_PIN, ACTUATOR_MOTOR_RIGHT_SPEED_PIN); 
-//      writeMotorSpeed(motorDirections, motorSpeeds, ACTUATOR_MOTOR_LEFT, ACTUATOR_MOTOR_LEFT_DIRECTION_PIN, ACTUATOR_MOTOR_LEFT_SPEED_PIN); 
-//    }
-//    else if (b == 52)
-//    {
-//      motorDirections[ACTUATOR_MOTOR_RIGHT] = !motorDirections[ACTUATOR_MOTOR_RIGHT];
-//      motorDirections[ACTUATOR_MOTOR_LEFT] = !motorDirections[ACTUATOR_MOTOR_LEFT]; 
-//      writeMotorSpeed(motorDirections, motorSpeeds, ACTUATOR_MOTOR_RIGHT, ACTUATOR_MOTOR_RIGHT_DIRECTION_PIN, ACTUATOR_MOTOR_RIGHT_SPEED_PIN); 
-//      writeMotorSpeed(motorDirections, motorSpeeds, ACTUATOR_MOTOR_LEFT, ACTUATOR_MOTOR_LEFT_DIRECTION_PIN, ACTUATOR_MOTOR_LEFT_SPEED_PIN); 
-//    }
-//    else if (b == 53)
-//    {
-//      servoAngles[ACTUATOR_SERVO_BAR_RIGHT] = ACTUATOR_SERVO_BAR_RIGHT_OPEN;
-//      servoAngles[ACTUATOR_SERVO_BAR_LEFT] = ACTUATOR_SERVO_BAR_LEFT_OPEN;
-//      writeServoAngle(servoAngles, ACTUATOR_SERVO_BAR_RIGHT, ACTUATOR_SERVO_BAR_RIGHT_PIN); 
-//      writeServoAngle(servoAngles, ACTUATOR_SERVO_BAR_LEFT, ACTUATOR_SERVO_BAR_LEFT_PIN); 
-//    }
-//    else if (b == 54)
-//    {
-//      servoAngles[ACTUATOR_SERVO_BAR_RIGHT] = ACTUATOR_SERVO_BAR_RIGHT_CLOSED;
-//      servoAngles[ACTUATOR_SERVO_BAR_LEFT] = ACTUATOR_SERVO_BAR_LEFT_CLOSED;
-//      writeServoAngle(servoAngles, ACTUATOR_SERVO_BAR_RIGHT, ACTUATOR_SERVO_BAR_RIGHT_PIN); 
-//      writeServoAngle(servoAngles, ACTUATOR_SERVO_BAR_LEFT, ACTUATOR_SERVO_BAR_LEFT_PIN); 
-//    }
-//  }
+  if (Serial.available() > 0) 
+  {
+    // read the incoming byte:
+    char b = Serial.read();
+
+    if (b == 49)
+    {
+      motorSpeeds[ACTUATOR_MOTOR_RIGHT] = 0;
+      motorSpeeds[ACTUATOR_MOTOR_LEFT] = 0;
+      writeMotorSpeed(motorSpeeds, ACTUATOR_MOTOR_RIGHT, ACTUATOR_MOTOR_RIGHT_DIRECTION_PIN, ACTUATOR_MOTOR_RIGHT_SPEED_PIN); 
+      writeMotorSpeed(motorSpeeds, ACTUATOR_MOTOR_LEFT, ACTUATOR_MOTOR_LEFT_DIRECTION_PIN, ACTUATOR_MOTOR_LEFT_SPEED_PIN); 
+    }
+    else if (b == 50)
+    {
+      motorSpeeds[ACTUATOR_MOTOR_RIGHT] += 0.1;
+      motorSpeeds[ACTUATOR_MOTOR_LEFT] += 0.1; 
+      writeMotorSpeed(motorSpeeds, ACTUATOR_MOTOR_RIGHT, ACTUATOR_MOTOR_RIGHT_DIRECTION_PIN, ACTUATOR_MOTOR_RIGHT_SPEED_PIN); 
+      writeMotorSpeed(motorSpeeds, ACTUATOR_MOTOR_LEFT, ACTUATOR_MOTOR_LEFT_DIRECTION_PIN, ACTUATOR_MOTOR_LEFT_SPEED_PIN); 
+    }
+    else if (b == 51)
+    {
+      motorSpeeds[ACTUATOR_MOTOR_RIGHT] -= 0.1;
+      motorSpeeds[ACTUATOR_MOTOR_LEFT] -= 0.1; 
+      writeMotorSpeed(motorSpeeds, ACTUATOR_MOTOR_RIGHT, ACTUATOR_MOTOR_RIGHT_DIRECTION_PIN, ACTUATOR_MOTOR_RIGHT_SPEED_PIN); 
+      writeMotorSpeed(motorSpeeds, ACTUATOR_MOTOR_LEFT, ACTUATOR_MOTOR_LEFT_DIRECTION_PIN, ACTUATOR_MOTOR_LEFT_SPEED_PIN); 
+    }
+    else if (b == 52)
+    {
+      motorSpeeds[ACTUATOR_MOTOR_RIGHT] = -motorSpeeds[ACTUATOR_MOTOR_RIGHT];
+      motorSpeeds[ACTUATOR_MOTOR_LEFT] = -motorSpeeds[ACTUATOR_MOTOR_LEFT]; 
+      writeMotorSpeed(motorSpeeds, ACTUATOR_MOTOR_RIGHT, ACTUATOR_MOTOR_RIGHT_DIRECTION_PIN, ACTUATOR_MOTOR_RIGHT_SPEED_PIN); 
+      writeMotorSpeed(motorSpeeds, ACTUATOR_MOTOR_LEFT, ACTUATOR_MOTOR_LEFT_DIRECTION_PIN, ACTUATOR_MOTOR_LEFT_SPEED_PIN); 
+    }
+    else if (b == 53)
+    {
+      motorSpeeds[ACTUATOR_MOTOR_RIGHT] += 0.1;
+      motorSpeeds[ACTUATOR_MOTOR_LEFT] -= 0.1; 
+      writeMotorSpeed(motorSpeeds, ACTUATOR_MOTOR_RIGHT, ACTUATOR_MOTOR_RIGHT_DIRECTION_PIN, ACTUATOR_MOTOR_RIGHT_SPEED_PIN); 
+      writeMotorSpeed(motorSpeeds, ACTUATOR_MOTOR_LEFT, ACTUATOR_MOTOR_LEFT_DIRECTION_PIN, ACTUATOR_MOTOR_LEFT_SPEED_PIN); 
+    }
+    else if (b == 54)
+    {
+      motorSpeeds[ACTUATOR_MOTOR_RIGHT] -= 0.1;
+      motorSpeeds[ACTUATOR_MOTOR_LEFT] += 0.1; 
+      writeMotorSpeed(motorSpeeds, ACTUATOR_MOTOR_RIGHT, ACTUATOR_MOTOR_RIGHT_DIRECTION_PIN, ACTUATOR_MOTOR_RIGHT_SPEED_PIN); 
+      writeMotorSpeed(motorSpeeds, ACTUATOR_MOTOR_LEFT, ACTUATOR_MOTOR_LEFT_DIRECTION_PIN, ACTUATOR_MOTOR_LEFT_SPEED_PIN); 
+    }
+    else if (b == 55)
+    {
+      servoAngles[ACTUATOR_SERVO_BAR_RIGHT] = ACTUATOR_SERVO_BAR_RIGHT_OPEN;
+      servoAngles[ACTUATOR_SERVO_BAR_LEFT] = ACTUATOR_SERVO_BAR_LEFT_OPEN;
+      writeServoAngle(servoAngles, ACTUATOR_SERVO_BAR_RIGHT, ACTUATOR_SERVO_BAR_RIGHT_PIN); 
+      writeServoAngle(servoAngles, ACTUATOR_SERVO_BAR_LEFT, ACTUATOR_SERVO_BAR_LEFT_PIN); 
+    }
+    else if (b == 56)
+    {
+      servoAngles[ACTUATOR_SERVO_BAR_RIGHT] = ACTUATOR_SERVO_BAR_RIGHT_CLOSED;
+      servoAngles[ACTUATOR_SERVO_BAR_LEFT] = ACTUATOR_SERVO_BAR_LEFT_CLOSED;
+      writeServoAngle(servoAngles, ACTUATOR_SERVO_BAR_RIGHT, ACTUATOR_SERVO_BAR_RIGHT_PIN); 
+      writeServoAngle(servoAngles, ACTUATOR_SERVO_BAR_LEFT, ACTUATOR_SERVO_BAR_LEFT_PIN); 
+    }
+  }
 
   updateMotorSpeedControl(ACTUATOR_MOTOR_RIGHT, ACTUATOR_MOTOR_RIGHT_DIRECTION_PIN, ACTUATOR_MOTOR_RIGHT_SPEED_PIN);
   updateMotorSpeedControl(ACTUATOR_MOTOR_LEFT, ACTUATOR_MOTOR_LEFT_DIRECTION_PIN, ACTUATOR_MOTOR_LEFT_SPEED_PIN);
 }
 
-void stateTestExitRoutine()
+void stateTestExit()
 {
   ledState[LED_RUNNING] = LOW;
   stopMotor(ACTUATOR_MOTOR_RIGHT, ACTUATOR_MOTOR_RIGHT_DIRECTION_PIN, ACTUATOR_MOTOR_RIGHT_SPEED_PIN);
   stopMotor(ACTUATOR_MOTOR_LEFT, ACTUATOR_MOTOR_LEFT_DIRECTION_PIN, ACTUATOR_MOTOR_LEFT_SPEED_PIN);
+}
+
+
+// The "s_wander" state 
+void stateWanderEnter()
+{
+  stateWanderEnterRoutine(ledState);
+}
+
+void stateWander()
+{  
+  // DEBUG
+  if (Serial.available() > 0) 
+  {
+    if (Serial.read() == ' ') 
+    {
+      stopMotor(ACTUATOR_MOTOR_RIGHT, ACTUATOR_MOTOR_RIGHT_DIRECTION_PIN, ACTUATOR_MOTOR_RIGHT_SPEED_PIN);
+      stopMotor(ACTUATOR_MOTOR_LEFT, ACTUATOR_MOTOR_LEFT_DIRECTION_PIN, ACTUATOR_MOTOR_LEFT_SPEED_PIN);
+    }
+  }
+  
+  readBtns(btnState);
+
+  readProximity(proximityMeasurements, proximityMeasurementIndex, SENSOR_PROXIMITY_RIGHT, SENSOR_PROXIMITY_RIGHT_PIN);
+  readProximity(proximityMeasurements, proximityMeasurementIndex, SENSOR_PROXIMITY_FORWARD_RIGHT, SENSOR_PROXIMITY_FORWARD_RIGHT_PIN);
+  readProximity(proximityMeasurements, proximityMeasurementIndex, SENSOR_PROXIMITY_FORWARD, SENSOR_PROXIMITY_FORWARD_PIN);
+  readProximity(proximityMeasurements, proximityMeasurementIndex, SENSOR_PROXIMITY_FORWARD_LEFT, SENSOR_PROXIMITY_FORWARD_LEFT_PIN);
+  readProximity(proximityMeasurements, proximityMeasurementIndex, SENSOR_PROXIMITY_LEFT, SENSOR_PROXIMITY_LEFT_PIN);
+  readProximity(proximityMeasurements, proximityMeasurementIndex, SENSOR_PROXIMITY_BACKWARD, SENSOR_PROXIMITY_BACKWARD_PIN);
+  readProximity(proximityMeasurements, proximityMeasurementIndex, SENSOR_PROXIMITY_DOWN_RIGHT, SENSOR_PROXIMITY_DOWN_RIGHT_PIN);
+  readProximity(proximityMeasurements, proximityMeasurementIndex, SENSOR_PROXIMITY_DOWN_LEFT, SENSOR_PROXIMITY_DOWN_LEFT_PIN);
+  readProximity(proximityMeasurements, proximityMeasurementIndex, SENSOR_PROXIMITY_DETECT_RIGHT, SENSOR_PROXIMITY_DETECT_RIGHT_PIN);
+  readProximity(proximityMeasurements, proximityMeasurementIndex, SENSOR_PROXIMITY_DETECT_LEFT, SENSOR_PROXIMITY_DETECT_LEFT_PIN);
+  readTOF(tofMeasurements, tofMeasurementIndex, SENSOR_TOF_RIGHT, SENSOR_TOF_RIGHT_TRIGGER_PIN, SENSOR_TOF_RIGHT_ECHO_PIN);
+  readTOF(tofMeasurements, tofMeasurementIndex, SENSOR_TOF_CENTER, SENSOR_TOF_CENTER_TRIGGER_PIN, SENSOR_TOF_CENTER_ECHO_PIN);
+  readTOF(tofMeasurements, tofMeasurementIndex, SENSOR_TOF_LEFT, SENSOR_TOF_LEFT_TRIGGER_PIN, SENSOR_TOF_LEFT_ECHO_PIN);
+  readIMU(imuMeasurements, &imuMeasurementIndex);
+
+  stateWanderRoutine(proximityMeasurements, tofMeasurements, imuMeasurements, motorSpeeds, ledState);
+}
+
+void stateWanderExit()
+{
+  stateWanderExitRoutine(motorSpeeds, ledState);
 }
 
 /**
@@ -365,16 +430,16 @@ void stateTestExitRoutine()
  */
 void log()
 {  
-  Serial.print("S: ");
-  Serial.print(state);
-  Serial.print("\t PROX: ");
-  if (checkProximityThreshold(proximityMeasurements, proximityAmbientMeasurements, proximityAmbientVarianceMeasurements, SENSOR_PROXIMITY_RIGHT)) Serial.print("R ");
-  if (checkProximityThreshold(proximityMeasurements, proximityAmbientMeasurements, proximityAmbientVarianceMeasurements, SENSOR_PROXIMITY_FORWARD_RIGHT)) Serial.print("FR ");
-  if (checkProximityThreshold(proximityMeasurements, proximityAmbientMeasurements, proximityAmbientVarianceMeasurements, SENSOR_PROXIMITY_FORWARD)) Serial.print("F ");
-  if (checkProximityThreshold(proximityMeasurements, proximityAmbientMeasurements, proximityAmbientVarianceMeasurements, SENSOR_PROXIMITY_FORWARD_LEFT)) Serial.print("FL ");
-  if (checkProximityThreshold(proximityMeasurements, proximityAmbientMeasurements, proximityAmbientVarianceMeasurements, SENSOR_PROXIMITY_LEFT)) Serial.print("L ");
-  if (checkProximityThreshold(proximityMeasurements, proximityAmbientMeasurements, proximityAmbientVarianceMeasurements, SENSOR_PROXIMITY_BACKWARD)) Serial.print("B ");
-  if (checkProximityThreshold(proximityMeasurements, proximityAmbientMeasurements, proximityAmbientVarianceMeasurements, SENSOR_PROXIMITY_DOWN_RIGHT)) Serial.print("DR ");
+//  Serial.print("S: ");
+//  Serial.print(state);
+//  Serial.print("\t PROX: ");
+//  if (checkProximityThreshold(proximityMeasurements, proximityAmbientMeasurements, proximityAmbientVarianceMeasurements, SENSOR_PROXIMITY_RIGHT)) Serial.print("R ");
+//  if (checkProximityThreshold(proximityMeasurements, proximityAmbientMeasurements, proximityAmbientVarianceMeasurements, SENSOR_PROXIMITY_FORWARD_RIGHT)) Serial.print("FR ");
+//  if (checkProximityThreshold(proximityMeasurements, proximityAmbientMeasurements, proximityAmbientVarianceMeasurements, SENSOR_PROXIMITY_FORWARD)) Serial.print("F ");
+//  if (checkProximityThreshold(proximityMeasurements, proximityAmbientMeasurements, proximityAmbientVarianceMeasurements, SENSOR_PROXIMITY_FORWARD_LEFT)) Serial.print("FL ");
+//  if (checkProximityThreshold(proximityMeasurements, proximityAmbientMeasurements, proximityAmbientVarianceMeasurements, SENSOR_PROXIMITY_LEFT)) Serial.print("L ");
+//  if (checkProximityThreshold(proximityMeasurements, proximityAmbientMeasurements, proximityAmbientVarianceMeasurements, SENSOR_PROXIMITY_BACKWARD)) Serial.print("B ");
+//  if (checkProximityThreshold(proximityMeasurements, proximityAmbientMeasurements, proximityAmbientVarianceMeasurements, SENSOR_PROXIMITY_DOWN_RIGHT)) Serial.print("DR ");
 //  if (checkProximityThreshold(proximityMeasurements, proximityAmbientMeasurements, proximityAmbientVarianceMeasurements, SENSOR_PROXIMITY_DOWN_LEFT)) Serial.print("DL ");
 //  if (checkProximityThreshold(proximityMeasurements, proximityAmbientMeasurements, proximityAmbientVarianceMeasurements, SENSOR_PROXIMITY_DETECT_RIGHT)) Serial.print("DTR ");
 //  if (checkProximityThreshold(proximityMeasurements, proximityAmbientMeasurements, proximityAmbientVarianceMeasurements, SENSOR_PROXIMITY_DETECT_LEFT)) Serial.print("DTL ");
@@ -402,5 +467,5 @@ void log()
 //  Serial.print(servoAngles[ACTUATOR_SERVO_BAR_RIGHT]);
 //  Serial.print(" S_B_L ");
 //  Serial.print(servoAngles[ACTUATOR_SERVO_BAR_LEFT]);
-  Serial.println("");
+//  Serial.println("");
 }

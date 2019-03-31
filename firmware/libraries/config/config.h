@@ -76,7 +76,7 @@
 #define ACTUATOR_MOTOR_SPEED_BOUNDS_B 255
 #define ACTUATOR_MOTOR_ENCODER_RESOLUTION 24
 #define ACTUATOR_MOTOR_TRANSMISSION 75
-#define ACTUATOR_MOTOR_DIAMETER 0.24f // m/s
+#define ACTUATOR_MOTOR_DIAMETER 0.12f // m/s
 #define ACTUATOR_MOTOR_PID_KP 200.f
 #define ACTUATOR_MOTOR_PID_KI 100.f
 #define ACTUATOR_MOTOR_PID_KD 10.f
@@ -144,11 +144,14 @@ enum State
   s_calibration,          // Calibrate all sensors and actuators
   s_idle,                 // Idle state, waiting for start
   s_test,                 // Testing state
-  s_run,
+  s_wander,               // Wander around, evade obstacles with TOF and detect bottles with IR
   s_turn,
   s_wait,
   s_panic             // Panic state, when something unexpected happened
 };
+
+// Wander
+#define WANDER_SPEED 0.3f
 
 
 #endif

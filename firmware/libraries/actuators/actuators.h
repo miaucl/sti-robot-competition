@@ -15,8 +15,7 @@ void configureMotor(int id,
 /**
  * Write the motor speeds
  */
-void writeMotorSpeed( boolean motorDirections[ACTUATOR_MOTOR_COUNT],
-                      double motorSpeeds[ACTUATOR_MOTOR_COUNT],
+void writeMotorSpeed( double motorSpeeds[ACTUATOR_MOTOR_COUNT],
                       int id,
                       int directionPin,
                       int speedPin);

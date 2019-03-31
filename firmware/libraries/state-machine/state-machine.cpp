@@ -45,7 +45,7 @@ State checkStateTransition( State currentState,
     // Wait for the START button to be pressed to start the robot
     if (btnState[BTN_START])
     {
-      return s_test; // <================================ TESTING
+      return s_wander;
     }
   }
 
