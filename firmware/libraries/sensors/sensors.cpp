@@ -496,7 +496,9 @@ float getMedianIMUZOrientationValue(float imuMeasurements[SENSOR_IMU_MEASUREMENT
   float sortedMeasurements[SENSOR_IMU_MEASUREMENT_COUNT] = {0};
   for (int i = 0; i<SENSOR_IMU_MEASUREMENT_COUNT; i++)
   {
-    sortedMeasurements[i] = imuMeasurements[SENSOR_IMU_YAW][i];
+    //sortedMeasurements[i] = imuMeasurements[SENSOR_IMU_YAW][i];
+    //sortedMeasurements[i] = imuMeasurements[SENSOR_IMU_PITCH][i];
+    sortedMeasurements[i] = imuMeasurements[SENSOR_IMU_ROLL][i];
   }
 
   // Sort values

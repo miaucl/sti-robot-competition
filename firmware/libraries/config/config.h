@@ -18,12 +18,12 @@
 
 /* Serial communication */
 #define SERIAL_ENABLE 1
+#define SERIAL_CONN_ENABLE 1
 #define SERIAL_BAUD_RATE 19200
 
 /* Timings */
-#define SENSOR_PROXIMITY_FREQUENCY 10 // ms
-#define SENSORS_FREQUENCY 100 // ms
-#define CONTROLLER_FREQUENCY 100 // ms
+#define PERIOD 10.f // ms
+
 
 /* Sensors */
 #define SENSOR_PROXIMITY_COUNT 10
@@ -72,23 +72,26 @@
 #define ACTUATOR_MOTOR_RIGHT 0
 #define ACTUATOR_MOTOR_LEFT 1
 // [0,200] -> [A, B] (m/s)
-#define ACTUATOR_MOTOR_SPEED_BOUNDS_A 0
-#define ACTUATOR_MOTOR_SPEED_BOUNDS_B 255
+#define ACTUATOR_MOTOR_SPEED_MAX 2.f // m/s
+#define ACTUATOR_MOTOR_SPEED_BOUNDS_A -255.f
+#define ACTUATOR_MOTOR_SPEED_BOUNDS_B 255.f
 #define ACTUATOR_MOTOR_ENCODER_RESOLUTION 24
 #define ACTUATOR_MOTOR_TRANSMISSION 75
-#define ACTUATOR_MOTOR_DIAMETER 0.12f // m/s
-#define ACTUATOR_MOTOR_PID_KP 200.f
-#define ACTUATOR_MOTOR_PID_KI 100.f
-#define ACTUATOR_MOTOR_PID_KD 10.f
+#define ACTUATOR_MOTOR_DIAMETER 0.12f // m
+#define ACTUATOR_MOTOR_MAX_SLEW_RATE 1.f
+#define ACTUATOR_MOTOR_PID_KP 400.f
+#define ACTUATOR_MOTOR_PID_KI 600.f
+#define ACTUATOR_MOTOR_PID_KD 20.f
 
 #define ACTUATOR_SERVO_COUNT 2
 #define ACTUATOR_SERVO_BAR_RIGHT 0
 #define ACTUATOR_SERVO_BAR_LEFT 1
+#define ACTUATOR_SERVO_STEPS_PER_SECOND 60.f // steps/s
 
-#define ACTUATOR_SERVO_BAR_RIGHT_OPEN 160
-#define ACTUATOR_SERVO_BAR_RIGHT_CLOSED 20
-#define ACTUATOR_SERVO_BAR_LEFT_OPEN 160
-#define ACTUATOR_SERVO_BAR_LEFT_CLOSED 20
+#define ACTUATOR_SERVO_BAR_RIGHT_OPEN 70
+#define ACTUATOR_SERVO_BAR_RIGHT_CLOSED 10
+#define ACTUATOR_SERVO_BAR_LEFT_OPEN 110
+#define ACTUATOR_SERVO_BAR_LEFT_CLOSED 170
 
 
 /* PINs */
@@ -143,8 +146,10 @@ enum State
   s_initialization,       // Initialization state, only active during set up
   s_calibration,          // Calibrate all sensors and actuators
   s_idle,                 // Idle state, waiting for start
-  s_test,                 // Testing state
+  s_test,                 // Testing state to test all features manually
+  s_analysis,             // Use to make some analysis on the behaviour
   s_wander,               // Wander around, evade obstacles with TOF and detect bottles with IR
+
   s_turn,
   s_wait,
   s_panic             // Panic state, when something unexpected happened

@@ -10,8 +10,11 @@
 #include <Servo.h>
 #include <AutoPID.h>
 
+#define MOTOR_SPEED_STEP (ACTUATOR_MOTOR_MAX_SLEW_RATE * PERIOD / 1000.f) // PERIOD IN MILLIS
+
 static AutoPID *autoPID[ACTUATOR_MOTOR_COUNT];
 static double targetMotorSpeeds[ACTUATOR_MOTOR_COUNT] = {0};
+static double intermediateMotorSpeeds[ACTUATOR_MOTOR_COUNT] = {0};
 static double controlMotorSpeeds[ACTUATOR_MOTOR_COUNT] = {0};
 static double measuredMotorSpeeds[ACTUATOR_MOTOR_COUNT] = {0};
 static long ticks[ACTUATOR_MOTOR_COUNT] = {0};
@@ -44,10 +47,25 @@ void configureMotor(int id,
 
 
   // Initialize the PID
-  autoPID[id] = new AutoPID(&measuredMotorSpeeds[id], &targetMotorSpeeds[id], &controlMotorSpeeds[id], 0.f, 255.f, ACTUATOR_MOTOR_PID_KP, ACTUATOR_MOTOR_PID_KI, ACTUATOR_MOTOR_PID_KD);
+  autoPID[id] = new AutoPID(&measuredMotorSpeeds[id], &intermediateMotorSpeeds[id], &controlMotorSpeeds[id], -255.f, 255.f, ACTUATOR_MOTOR_PID_KP, ACTUATOR_MOTOR_PID_KI, ACTUATOR_MOTOR_PID_KD);
   autoPID[id]->setTimeStep(10);
   autoPID[id]->setBangBang(1, 1);
   autoPID[id]->reset();
+}
+
+float calculateNextIntermediateSpeed(float targetMotorSpeed, float intermediateMotorSpeed)
+{
+  if (intermediateMotorSpeed == targetMotorSpeed) return targetMotorSpeed;
+  // Serial.print(targetMotorSpeed);
+  // Serial.print("\t");
+  // Serial.print(intermediateMotorSpeed);
+  // Serial.print("\t");
+  float step = MOTOR_SPEED_STEP; // PERIOD IN MILLISECONDS
+  if (targetMotorSpeed < intermediateMotorSpeed) step *= -1; // Go Down
+  float newIntermediateMotorSpeed = intermediateMotorSpeed + step;
+  //Serial.println(newIntermediateMotorSpeed);
+  if (abs(newIntermediateMotorSpeed - targetMotorSpeed) < 2 * MOTOR_SPEED_STEP) return targetMotorSpeed;
+  else return newIntermediateMotorSpeed;
 }
 
 void writeMotorSpeed( double motorSpeeds[ACTUATOR_MOTOR_COUNT],
@@ -56,9 +74,15 @@ void writeMotorSpeed( double motorSpeeds[ACTUATOR_MOTOR_COUNT],
                       int speedPin)
 {
   // Save value
-  targetMotorSpeeds[id] = abs(motorSpeeds[id]);
+  targetMotorSpeeds[id] = motorSpeeds[id];
+  intermediateMotorSpeeds[id] = measuredMotorSpeeds[id];
 
-  digitalWrite(directionPin, motorSpeeds[id] < 0);
+  // Bound speed
+  targetMotorSpeeds[id] = min(max(targetMotorSpeeds[id], -ACTUATOR_MOTOR_SPEED_MAX), ACTUATOR_MOTOR_SPEED_MAX);
+
+  intermediateMotorSpeeds[id] = calculateNextIntermediateSpeed(targetMotorSpeeds[id], measuredMotorSpeeds[id]);
+
+  // digitalWrite(directionPin, motorSpeeds[id] < 0);
 }
 
 
@@ -68,6 +92,7 @@ void stopMotor( int id,
 {
   // Set to 0
   targetMotorSpeeds[id] = 0;
+  intermediateMotorSpeeds[id] = 0;
 
   digitalWrite(speedPin, 0);
   digitalWrite(directionPin, LOW);
@@ -78,7 +103,8 @@ void stopMotor( int id,
 
 void updateMotorSpeedControl( int id,
                               int directionPin,
-                              int speedPin)
+                              int speedPin,
+                              double motorPositionMeasurements[ACTUATOR_MOTOR_COUNT])
 {
   long motorUpdateTimestamp = micros();
 
@@ -95,21 +121,33 @@ void updateMotorSpeedControl( int id,
     float radPerSecond = ((float)ticksPerSecond) / ACTUATOR_MOTOR_ENCODER_RESOLUTION / ACTUATOR_MOTOR_TRANSMISSION * 2 * M_PI;
     float meterPerSecond = radPerSecond * ACTUATOR_MOTOR_DIAMETER;
 
+    // Go Backwards
+    if (controlMotorSpeeds[id] < 0) meterPerSecond *= -1;
+
+    // Export measurement of position
+    motorPositionMeasurements[id] = meterPerSecond * (motorUpdateTimestamp - lastMotorUpdateTimestamp[id]) / 1000000;
+
     measuredMotorSpeeds[id] = meterPerSecond;
   }
+
+  // Get new intermediate motor speed
+  intermediateMotorSpeeds[id] = calculateNextIntermediateSpeed(targetMotorSpeeds[id], intermediateMotorSpeeds[id]);
 
   // Run PID Controller
   autoPID[id]->run();
 
-  // Serial.print(targetMotorSpeeds[id]);
-  // Serial.print(" ");
-  // Serial.print(measuredMotorSpeeds[id]);
-  // Serial.print(" ");
-  // Serial.print(controlMotorSpeeds[id]);
-  // Serial.println("");
+  // Test outputs CSV
+  // if (id == 0)
+  // {
+  //   Serial.print(intermediateMotorSpeeds[0]);
+  //   Serial.print(',');
+  //   Serial.println(measuredMotorSpeeds[0]);
+  //   Serial.print(',');
+  //   Serial.print(controlMotorSpeeds[0]);
+  // }
 
   // Stop if value is 0
-  if (targetMotorSpeeds[id] == 0)
+  if (intermediateMotorSpeeds[id] == 0)
   {
     autoPID[id]->reset();
     analogWrite(speedPin, 0);
@@ -117,7 +155,8 @@ void updateMotorSpeedControl( int id,
   // PID control value
   else
   {
-    analogWrite(speedPin, controlMotorSpeeds[id]);
+    analogWrite(speedPin, abs(controlMotorSpeeds[id]));
+    digitalWrite(directionPin, controlMotorSpeeds[id] < 0);
   }
 
   // Save timestamp
@@ -125,12 +164,14 @@ void updateMotorSpeedControl( int id,
 }
 
 
+#define SERVO_ANGLE_STEP (1000.f / ACTUATOR_SERVO_STEPS_PER_SECOND) // PERIOD IN MILLIS
 
 Servo servos[2];
+static int targetServoAngle[ACTUATOR_SERVO_COUNT] = {0};
+static int intermediateServoAngle[ACTUATOR_SERVO_COUNT] = {0};
+static long lastServoUpdateTimestamp[ACTUATOR_MOTOR_COUNT] = {millis(), millis()};
 
-/**
- * Configure the servo
- */
+
 void configureServo(int id,
                     int pin)
 {
@@ -145,12 +186,35 @@ void configureServo(int id,
   servos[id].attach(pin);
 }
 
-/**
- * Write the servo angle
- */
-void writeServoAngle( int servoAngles[ACTUATOR_SERVO_COUNT],
+void resetServoAngle( int servoAngles[ACTUATOR_SERVO_COUNT],
                       int id,
                       int pin)
 {
   servos[id].write(servoAngles[id]);
+  targetServoAngle[id] = servoAngles[id];
+  intermediateServoAngle[id] = servoAngles[id];
+}
+
+void writeServoAngle( int servoAngles[ACTUATOR_SERVO_COUNT],
+                      int id,
+                      int pin)
+{
+  targetServoAngle[id] = servoAngles[id];
+
+}
+
+void updateServoAngleControl( int id,
+                              int pin)
+{
+  long servoUpdateTimestamp = millis();
+
+  if ((servoUpdateTimestamp - lastServoUpdateTimestamp[id]) > SERVO_ANGLE_STEP)
+  {
+    if (targetServoAngle[id] > intermediateServoAngle[id]) intermediateServoAngle[id]++;
+    if (targetServoAngle[id] < intermediateServoAngle[id]) intermediateServoAngle[id]--;
+
+    lastServoUpdateTimestamp[id] = servoUpdateTimestamp;
+
+    servos[id].write(intermediateServoAngle[id]);
+  }
 }
