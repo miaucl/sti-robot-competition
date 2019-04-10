@@ -90,7 +90,7 @@ void configureIMU(int i2cDataPin,
 /**
  * Calibrate the IMU sensor
  */
-void calibrateIMU(float imuOffsetMeasurements[SENSOR_IMU_MEASUREMENT_DIMENSIONS]);
+void calibrateIMU();
 
 
 /**

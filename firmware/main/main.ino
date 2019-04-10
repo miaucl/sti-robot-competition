@@ -34,7 +34,6 @@ int tofMeasurements[SENSOR_TOF_COUNT][SENSOR_TOF_MEASUREMENT_COUNT] = {0};
 int tofMeasurementIndex[SENSOR_TOF_COUNT] = {0};
 
 // The measurements for the imu sensors
-float imuOffsetMeasurements[SENSOR_IMU_MEASUREMENT_DIMENSIONS] = {0};
 float imuMeasurements[SENSOR_IMU_MEASUREMENT_DIMENSIONS][SENSOR_IMU_MEASUREMENT_COUNT] = {0};
 int imuMeasurementIndex = 0;
 
@@ -266,7 +265,7 @@ void stateCalibration()
   calibrateTOF(SENSOR_TOF_RIGHT, SENSOR_TOF_RIGHT_TRIGGER_PIN, SENSOR_TOF_RIGHT_ECHO_PIN);
   calibrateTOF(SENSOR_TOF_CENTER, SENSOR_TOF_CENTER_TRIGGER_PIN, SENSOR_TOF_CENTER_ECHO_PIN);
   calibrateTOF(SENSOR_TOF_LEFT, SENSOR_TOF_LEFT_TRIGGER_PIN, SENSOR_TOF_LEFT_ECHO_PIN);
-  calibrateIMU(imuOffsetMeasurements);
+  calibrateIMU();
 
   readBtns(btnState);
 }
@@ -378,6 +377,9 @@ void stateTest()
   updateMotorSpeedControl(ACTUATOR_MOTOR_LEFT, ACTUATOR_MOTOR_LEFT_DIRECTION_PIN, ACTUATOR_MOTOR_LEFT_SPEED_PIN, motorPositionMeasurements);
   updateServoAngleControl(ACTUATOR_SERVO_BAR_RIGHT, ACTUATOR_SERVO_BAR_RIGHT_PIN);
   updateServoAngleControl(ACTUATOR_SERVO_BAR_LEFT, ACTUATOR_SERVO_BAR_LEFT_PIN);
+
+//  Serial.print("Z: ");
+//  Serial.println(getMedianIMUZOrientationValue(imuMeasurements));
 //
 //  static double m[2] = {0};
 //

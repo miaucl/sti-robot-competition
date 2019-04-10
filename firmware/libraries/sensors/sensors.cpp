@@ -207,6 +207,8 @@ boolean checkTOFThreshold(int tofMeasurements[SENSOR_TOF_COUNT][SENSOR_TOF_MEASU
  */
 MPU6050 mpu;
 
+int FifoAlive = 0; // tests if the interrupt is triggering
+int IsAlive = -20;     // counts interrupt start at -20 to get 20+ good values before assuming connected
 
 bool dmpReady = false;  // set true if DMP init was successful
 uint8_t mpuIntStatus;   // holds actual interrupt status byte from MPU
@@ -214,6 +216,16 @@ uint8_t devStatus;      // return status after each device operation (0 = succes
 uint16_t packetSize;    // expected DMP packet size (default is 42 bytes)
 uint16_t fifoCount;     // count of all bytes currently in FIFO
 uint8_t fifoBuffer[64]; // FIFO storage buffer
+
+// orientation/motion vars
+Quaternion q;           // [w, x, y, z]         quaternion container
+VectorInt16 aa;         // [x, y, z]            accel sensor measurements
+VectorInt16 aaReal;     // [x, y, z]            gravity-free accel sensor measurements
+VectorInt16 aaWorld;    // [x, y, z]            world-frame accel sensor measurements
+VectorFloat gravity;    // [x, y, z]            gravity vector
+float euler[3];         // [psi, theta, phi]    Euler angle container
+float ypr[3];           // [yaw, pitch, roll]   yaw/pitch/roll container and gravity vector
+
 
 // ================================================================
 // ===               INTERRUPT DETECTION ROUTINE                ===
@@ -224,6 +236,20 @@ void dmpDataReady()
 {
   mpuInterrupt = true;
 }
+
+
+// ================================================================
+// ===                        MPU Math                          ===
+// ================================================================
+
+void MPUMath(uint8_t fifoBuffer[64])
+{
+  float Yaw, Pitch, Roll;
+  mpu.dmpGetQuaternion(&q, fifoBuffer);
+  mpu.dmpGetGravity(&gravity, &q);
+  mpu.dmpGetYawPitchRoll(ypr, &q, &gravity);
+}
+
 
 
 void configureIMU(int i2cDataPin,
@@ -294,76 +320,82 @@ void configureIMU(int i2cDataPin,
   }
 }
 
-void calibrateIMU(float imuOffsetMeasurements[SENSOR_IMU_MEASUREMENT_DIMENSIONS])
+void calibrateIMU()
 {
-  Quaternion q;
-  VectorFloat gravity;
-  float ypr[SENSOR_IMU_MEASUREMENT_DIMENSIONS];
-
-
   // Wait until the IMU has stabelized
   #ifdef SERIAL_ENABLE
-  Serial.print("Calibrating");
+  Serial.print("Calibrate Sensor 'IMU'");
   #endif
 
-  for (int i = 0; i<10; i++)
-  {
-    #ifdef SERIAL_ENABLE
-    Serial.print(".");
-    #endif
-    delay(300);
-  }
-  #ifdef SERIAL_ENABLE
-  Serial.println(" Done!");
-  #endif
+  // long startCalibrationTime = millis();
+  // while (millis() - startCalibrationTime < 20000)
+  // {
+  //   static unsigned long LastGoodPacketTime;
+  //   mpuInterrupt = false;
+  //   FifoAlive = 1;
+  //   fifoCount = mpu.getFIFOCount();
+  //   // we have failed Reset and wait till next time!
+  //   if ((!fifoCount) || (fifoCount % packetSize))
+  //   {
+  //     // clear the buffer and start over
+  //     mpu.resetFIFO();
+  //   }
+  //   else
+  //   {
+  //     #ifdef SERIAL_ENABLE
+  //     //Serial.print(".");
+  //     Serial.println((millis() - startCalibrationTime) / 1000);
+  //     #endif
+  //
+  //     // Get the packets until we have the latest!
+  //     while (fifoCount  >= packetSize)
+  //     {
+  //       // lets do the magic and get the data
+  //       mpu.getFIFOBytes(fifoBuffer, packetSize);
+  //       fifoCount -= packetSize;
+  //     }
+  //     LastGoodPacketTime = millis();
+  //     // MPUMath(fifoBuffer); // <<<<<<<<<<<<< On success MPUMath() <<<<<<<<<<<<<<<
+  //     //
+  //     // #ifdef SERIAL_ENABLE
+  //     // Serial.print("ypr\t");
+  //     // Serial.print(ypr[0]);
+  //     // Serial.print("\t");
+  //     // Serial.print(ypr[1]);
+  //     // Serial.print("\t");
+  //     // Serial.println(ypr[2]);
+  //     // #endif
+  //   }
+  // }
 
-  // if programming failed, don't try to do anything
-  if (!dmpReady) return;
 
   for (int i = 0; i<SENSOR_IMU_MEASUREMENT_COUNT;)
   {
-    // Wait for data
-    while (!mpuInterrupt && fifoCount < packetSize);
-
-    // reset interrupt flag and get INT_STATUS byte
+    static unsigned long LastGoodPacketTime;
     mpuInterrupt = false;
-    mpuIntStatus = mpu.getIntStatus();
-
-    // get current FIFO count
+    FifoAlive = 1;
     fifoCount = mpu.getFIFOCount();
-
-    // check for overflow (this should never happen unless our code is too inefficient)
-    // May happen due to other setup, clear and retry
-    if ((mpuIntStatus & 0x10) || fifoCount == 1024)
+    // we have failed Reset and wait till next time!
+    if ((!fifoCount) || (fifoCount % packetSize))
     {
-      // reset so we can continue cleanly
+      // clear the buffer and start over
       mpu.resetFIFO();
-      #ifdef SERIAL_ENABLE
-      Serial.println("FIFO overflow > Clean and retry …");
-      #endif
-    // otherwise, check for DMP data ready interrupt (this should happen frequently)
     }
-    else if (mpuIntStatus & 0x02)
+    else
     {
-      // wait for correct available data length, should be a VERY short wait
-      while (fifoCount < packetSize) fifoCount = mpu.getFIFOCount();
+      #ifdef SERIAL_ENABLE
+      Serial.print(".");
+      #endif
 
-      // read a packet from FIFO
-      mpu.getFIFOBytes(fifoBuffer, packetSize);
-
-      // track FIFO count here in case there is > 1 packet available
-      // (this lets us immediately read more without waiting for an interrupt)
-      fifoCount -= packetSize;
-
-      // display YPR angles in degrees
-      mpu.dmpGetQuaternion(&q, fifoBuffer);
-      mpu.dmpGetGravity(&gravity, &q);
-      mpu.dmpGetYawPitchRoll(ypr, &q, &gravity);
-
-      for (int j = 0; j<SENSOR_IMU_MEASUREMENT_DIMENSIONS; j++)
+      // Get the packets until we have the latest!
+      while (fifoCount  >= packetSize)
       {
-        imuOffsetMeasurements[j] += ypr[j] * 180/M_PI;
+        // lets do the magic and get the data
+        mpu.getFIFOBytes(fifoBuffer, packetSize);
+        fifoCount -= packetSize;
       }
+      LastGoodPacketTime = millis();
+      MPUMath(fifoBuffer); // <<<<<<<<<<<<< On success MPUMath() <<<<<<<<<<<<<<<
 
       // #ifdef SERIAL_ENABLE
       // Serial.print("ypr\t");
@@ -378,109 +410,65 @@ void calibrateIMU(float imuOffsetMeasurements[SENSOR_IMU_MEASUREMENT_DIMENSIONS]
     }
   }
 
-  // Calculate the offset
-  for (int j = 0; j<SENSOR_IMU_MEASUREMENT_DIMENSIONS; j++)
-  {
-    imuOffsetMeasurements[j] /= SENSOR_IMU_MEASUREMENT_COUNT;
-  }
-
   #ifdef SERIAL_ENABLE
-  Serial.print("ypr offset\t");
-  Serial.print(imuOffsetMeasurements[0]);
-  Serial.print("\t");
-  Serial.print(imuOffsetMeasurements[1]);
-  Serial.print("\t");
-  Serial.println(imuOffsetMeasurements[2]);
+  Serial.println(" Done!");
   #endif
-
-
-  // Reset the FIFO
-  mpu.resetFIFO();
 }
+
 
 void readIMU( float imuMeasurements[SENSOR_IMU_MEASUREMENT_DIMENSIONS][SENSOR_IMU_MEASUREMENT_COUNT],
               int *imuMeasurementIndex)
 {
-  Quaternion q;
-  VectorFloat gravity;
-  float ypr[SENSOR_IMU_MEASUREMENT_DIMENSIONS];
-
-  // if programming failed, don't try to do anything
-  if (!dmpReady) return;
-
-  // Reset the FIFO
-  mpu.resetFIFO();
-
-  while (1)
+  static unsigned long LastGoodPacketTime;
+  mpuInterrupt = false;
+  FifoAlive = 1;
+  fifoCount = mpu.getFIFOCount();
+  // we have failed Reset and wait till next time!
+  if ((!fifoCount) || (fifoCount % packetSize))
   {
-    // Wait for data
-    while (!mpuInterrupt && fifoCount < packetSize);
-
-    // reset interrupt flag and get INT_STATUS byte
-    mpuInterrupt = false;
-    mpuIntStatus = mpu.getIntStatus();
-
-    // get current FIFO count
-    fifoCount = mpu.getFIFOCount();
-
-    // check for overflow (this should never happen unless our code is too inefficient)
-    // May happen due to other setup, clear and retry
-    if ((mpuIntStatus & 0x10) || fifoCount == 1024)
+    // clear the buffer and start over
+    mpu.resetFIFO();
+  }
+  else
+  {
+    // Get the packets until we have the latest!
+    while (fifoCount  >= packetSize)
     {
-      // reset so we can continue cleanly
-      mpu.resetFIFO();
-      #ifdef SERIAL_ENABLE
-      Serial.println("FIFO overflow > Clean and retry …");
-      #endif
-    // otherwise, check for DMP data ready interrupt (this should happen frequently)
-    }
-    else if (mpuIntStatus & 0x02)
-    {
-      // wait for correct available data length, should be a VERY short wait
-      while (fifoCount < packetSize) fifoCount = mpu.getFIFOCount();
-
-      // read a packet from FIFO
+      // lets do the magic and get the data
       mpu.getFIFOBytes(fifoBuffer, packetSize);
-
-      // track FIFO count here in case there is > 1 packet available
-      // (this lets us immediately read more without waiting for an interrupt)
       fifoCount -= packetSize;
-
-      // display YPR angles in degrees
-      mpu.dmpGetQuaternion(&q, fifoBuffer);
-      mpu.dmpGetGravity(&gravity, &q);
-      mpu.dmpGetYawPitchRoll(ypr, &q, &gravity);
-
-      // #ifdef SERIAL_ENABLE
-      // Serial.print("ypr\t");
-      // Serial.print(ypr[0]);
-      // Serial.print("\t");
-      // Serial.print(ypr[1]);
-      // Serial.print("\t");
-      // Serial.println(ypr[2]);
-      // #endif
-
-      imuMeasurements[SENSOR_IMU_YAW][*imuMeasurementIndex] = ypr[0];
-      imuMeasurements[SENSOR_IMU_PITCH][*imuMeasurementIndex] = ypr[1];
-      imuMeasurements[SENSOR_IMU_ROLL][*imuMeasurementIndex] = ypr[2];
-
-      // #ifdef SERIAL_ENABLE
-      // Serial.print("yprs\t");
-      // Serial.print(imuMeasurements[SENSOR_IMU_YAW][*imuMeasurementIndex]);
-      // Serial.print("\t");
-      // Serial.print(imuMeasurements[SENSOR_IMU_PITCH][*imuMeasurementIndex]);
-      // Serial.print("\t");
-      // Serial.println(imuMeasurements[SENSOR_IMU_ROLL][*imuMeasurementIndex]);
-      // #endif
-
-      (*imuMeasurementIndex)++;
-      if (*imuMeasurementIndex >= SENSOR_IMU_MEASUREMENT_COUNT)
-      {
-        *imuMeasurementIndex = 0;
-      }
-
-      break;
     }
+    LastGoodPacketTime = millis();
+    MPUMath(fifoBuffer); // <<<<<<<<<<<<< On success MPUMath() <<<<<<<<<<<<<<<<<
+  }
+
+
+  // #ifdef SERIAL_ENABLE
+  // Serial.print("ypr\t");
+  // Serial.print(ypr[0]);
+  // Serial.print("\t");
+  // Serial.print(ypr[1]);
+  // Serial.print("\t");
+  // Serial.println(ypr[2]);
+  // #endif
+
+  imuMeasurements[SENSOR_IMU_YAW][*imuMeasurementIndex] = ypr[0] * 180.f/M_PI;
+  imuMeasurements[SENSOR_IMU_PITCH][*imuMeasurementIndex] = ypr[1] * 180.f/M_PI;
+  imuMeasurements[SENSOR_IMU_ROLL][*imuMeasurementIndex] = ypr[2] * 180.f/M_PI;
+
+  // #ifdef SERIAL_ENABLE
+  // Serial.print("yprs\t");
+  // Serial.print(imuMeasurements[SENSOR_IMU_YAW][*imuMeasurementIndex]);
+  // Serial.print("\t");
+  // Serial.print(imuMeasurements[SENSOR_IMU_PITCH][*imuMeasurementIndex]);
+  // Serial.print("\t");
+  // Serial.println(imuMeasurements[SENSOR_IMU_ROLL][*imuMeasurementIndex]);
+  // #endif
+
+  (*imuMeasurementIndex)++;
+  if (*imuMeasurementIndex >= SENSOR_IMU_MEASUREMENT_COUNT)
+  {
+    *imuMeasurementIndex = 0;
   }
 }
 
@@ -496,9 +484,9 @@ float getMedianIMUZOrientationValue(float imuMeasurements[SENSOR_IMU_MEASUREMENT
   float sortedMeasurements[SENSOR_IMU_MEASUREMENT_COUNT] = {0};
   for (int i = 0; i<SENSOR_IMU_MEASUREMENT_COUNT; i++)
   {
-    //sortedMeasurements[i] = imuMeasurements[SENSOR_IMU_YAW][i];
+    sortedMeasurements[i] = imuMeasurements[SENSOR_IMU_YAW][i];
     //sortedMeasurements[i] = imuMeasurements[SENSOR_IMU_PITCH][i];
-    sortedMeasurements[i] = imuMeasurements[SENSOR_IMU_ROLL][i];
+    //sortedMeasurements[i] = imuMeasurements[SENSOR_IMU_ROLL][i];
   }
 
   // Sort values
