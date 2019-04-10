@@ -117,6 +117,7 @@ void configuration()
 
   configureServo(ACTUATOR_SERVO_BAR_RIGHT, ACTUATOR_SERVO_BAR_RIGHT_PIN);
   configureServo(ACTUATOR_SERVO_BAR_LEFT, ACTUATOR_SERVO_BAR_LEFT_PIN);
+
   servoAngles[ACTUATOR_SERVO_BAR_RIGHT] = ACTUATOR_SERVO_BAR_RIGHT_CLOSED;
   servoAngles[ACTUATOR_SERVO_BAR_LEFT] = ACTUATOR_SERVO_BAR_LEFT_CLOSED;
   resetServoAngle(servoAngles, ACTUATOR_SERVO_BAR_RIGHT, ACTUATOR_SERVO_BAR_RIGHT_PIN);
@@ -184,6 +185,7 @@ void loop()
       case s_idle: stateIdleExit(); break;
       case s_wander: stateWanderExit(); break;
       case s_test: stateTestExit(); break;
+      case s_analysis: stateAnalysisExit(); break;
     }
 
     // Enter next state
@@ -194,6 +196,7 @@ void loop()
       case s_idle: stateIdleEnter(); break;
       case s_wander: stateWanderEnter(); break;
       case s_test: stateTestEnter(); break;
+      case s_analysis: stateTestEnter(); break;
     }
 
     // Set next state
@@ -211,6 +214,7 @@ void loop()
     case s_idle: stateIdle(); break;
     case s_wander: stateWander(); break;
     case s_test: stateTest(); break;
+    case s_analysis: stateAnalysis(); break;
   }
 
   // Feedback
@@ -349,7 +353,7 @@ void stateTest()
       writeMotorSpeed(motorSpeeds, ACTUATOR_MOTOR_RIGHT, ACTUATOR_MOTOR_RIGHT_DIRECTION_PIN, ACTUATOR_MOTOR_RIGHT_SPEED_PIN);
       writeMotorSpeed(motorSpeeds, ACTUATOR_MOTOR_LEFT, ACTUATOR_MOTOR_LEFT_DIRECTION_PIN, ACTUATOR_MOTOR_LEFT_SPEED_PIN);
     }
-    else if (b == 199)
+    else if (b == 99)
     {
       motorSpeeds[ACTUATOR_MOTOR_RIGHT] -= 0.1;
       motorSpeeds[ACTUATOR_MOTOR_LEFT] += 0.1;
@@ -378,13 +382,15 @@ void stateTest()
   updateServoAngleControl(ACTUATOR_SERVO_BAR_RIGHT, ACTUATOR_SERVO_BAR_RIGHT_PIN);
   updateServoAngleControl(ACTUATOR_SERVO_BAR_LEFT, ACTUATOR_SERVO_BAR_LEFT_PIN);
 
-//  Serial.print("Z: ");
-//  Serial.println(getMedianIMUZOrientationValue(imuMeasurements));
+  Serial.print("Z: ");
+  Serial.print(getMedianIMUZOrientationValue(imuMeasurements));
+  Serial.print("\tIR: ");
+  Serial.println(getAverageProximityValue(proximityMeasurements, SENSOR_PROXIMITY_FORWARD));
 //
 //  static double m[2] = {0};
 //
 //  m[0] += (motorPositionMeasurements[0] + motorPositionMeasurements[1]) / 2; // Directional speed
-//  m[1] += abs(motorPositionMeasurements[0] - motorPositionMeasurements[1]) * 2; // Rotational speed 
+//  m[1] += abs(motorPositionMeasurements[0] - motorPositionMeasurements[1]) * 2; // Rotational speed
 //
 //  Serial.print(millis());
 //  Serial.print(",");

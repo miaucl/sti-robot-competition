@@ -18,7 +18,7 @@ void stateAnalysisRoutine(int proximityMeasurements[SENSOR_PROXIMITY_COUNT][SENS
                           float imuMeasurements[SENSOR_IMU_MEASUREMENT_DIMENSIONS][SENSOR_IMU_MEASUREMENT_COUNT],
                           double motorSpeeds[ACTUATOR_MOTOR_COUNT],
                           double motorPositionMeasurements[ACTUATOR_MOTOR_COUNT],
-                        boolean ledState[LED_COUNT]);
+                          boolean ledState[LED_COUNT]);
 
 /**
  * Exit the state analysis

@@ -419,27 +419,32 @@ void calibrateIMU()
 void readIMU( float imuMeasurements[SENSOR_IMU_MEASUREMENT_DIMENSIONS][SENSOR_IMU_MEASUREMENT_COUNT],
               int *imuMeasurementIndex)
 {
+  //Serial.print(">");
   static unsigned long LastGoodPacketTime;
   mpuInterrupt = false;
   FifoAlive = 1;
   fifoCount = mpu.getFIFOCount();
+  //Serial.print("f");
   // we have failed Reset and wait till next time!
   if ((!fifoCount) || (fifoCount % packetSize))
   {
     // clear the buffer and start over
     mpu.resetFIFO();
+    //Serial.println("r");
   }
   else
   {
     // Get the packets until we have the latest!
-    while (fifoCount  >= packetSize)
+    while (fifoCount >= packetSize)
     {
       // lets do the magic and get the data
       mpu.getFIFOBytes(fifoBuffer, packetSize);
       fifoCount -= packetSize;
     }
+    //Serial.print("p");
     LastGoodPacketTime = millis();
     MPUMath(fifoBuffer); // <<<<<<<<<<<<< On success MPUMath() <<<<<<<<<<<<<<<<<
+    //Serial.print("m");
   }
 
 
@@ -455,6 +460,7 @@ void readIMU( float imuMeasurements[SENSOR_IMU_MEASUREMENT_DIMENSIONS][SENSOR_IM
   imuMeasurements[SENSOR_IMU_YAW][*imuMeasurementIndex] = ypr[0] * 180.f/M_PI;
   imuMeasurements[SENSOR_IMU_PITCH][*imuMeasurementIndex] = ypr[1] * 180.f/M_PI;
   imuMeasurements[SENSOR_IMU_ROLL][*imuMeasurementIndex] = ypr[2] * 180.f/M_PI;
+  //Serial.print("i");
 
   // #ifdef SERIAL_ENABLE
   // Serial.print("yprs\t");
@@ -470,6 +476,8 @@ void readIMU( float imuMeasurements[SENSOR_IMU_MEASUREMENT_DIMENSIONS][SENSOR_IM
   {
     *imuMeasurementIndex = 0;
   }
+  //Serial.println(";");
+
 }
 
 
