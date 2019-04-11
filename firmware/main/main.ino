@@ -225,6 +225,11 @@ void loop()
   log();
 }
 
+// ================================================================
+// ===                        INITIALIZATION STATE              ===
+// ================================================================
+
+
 // The "s_initialization" state s
 void stateInitializationEnter()
 {
@@ -240,6 +245,11 @@ void stateInitializationExit()
 {
   // Do nothing
 }
+
+
+// ================================================================
+// ===                        CALIBRATION STATE                 ===
+// ================================================================
 
 
 // The "s_calibration" state
@@ -279,6 +289,11 @@ void stateCalibrationExit()
   ledState[LED_SYSTEM] = LOW;
 }
 
+// ================================================================
+// ===                        IDLE STATE                        ===
+// ================================================================
+
+
 // The "s_idle" state
 void stateIdleEnter()
 {
@@ -293,6 +308,11 @@ void stateIdleExit()
 {
 }
 
+// ================================================================
+// ===                        TEST STATE                        ===
+// ================================================================
+
+
 // The "s_test" state
 void stateTestEnter()
 {
@@ -301,23 +321,7 @@ void stateTestEnter()
 
 void stateTest()
 {
-  readBtns(btnState);
-
-  readProximity(proximityMeasurements, proximityMeasurementIndex, SENSOR_PROXIMITY_RIGHT, SENSOR_PROXIMITY_RIGHT_PIN);
-  readProximity(proximityMeasurements, proximityMeasurementIndex, SENSOR_PROXIMITY_FORWARD_RIGHT, SENSOR_PROXIMITY_FORWARD_RIGHT_PIN);
-  readProximity(proximityMeasurements, proximityMeasurementIndex, SENSOR_PROXIMITY_FORWARD, SENSOR_PROXIMITY_FORWARD_PIN);
-  readProximity(proximityMeasurements, proximityMeasurementIndex, SENSOR_PROXIMITY_FORWARD_LEFT, SENSOR_PROXIMITY_FORWARD_LEFT_PIN);
-  readProximity(proximityMeasurements, proximityMeasurementIndex, SENSOR_PROXIMITY_LEFT, SENSOR_PROXIMITY_LEFT_PIN);
-  readProximity(proximityMeasurements, proximityMeasurementIndex, SENSOR_PROXIMITY_BACKWARD, SENSOR_PROXIMITY_BACKWARD_PIN);
-  readProximity(proximityMeasurements, proximityMeasurementIndex, SENSOR_PROXIMITY_DOWN_RIGHT, SENSOR_PROXIMITY_DOWN_RIGHT_PIN);
-  readProximity(proximityMeasurements, proximityMeasurementIndex, SENSOR_PROXIMITY_DOWN_LEFT, SENSOR_PROXIMITY_DOWN_LEFT_PIN);
-  readProximity(proximityMeasurements, proximityMeasurementIndex, SENSOR_PROXIMITY_DETECT_RIGHT, SENSOR_PROXIMITY_DETECT_RIGHT_PIN);
-  readProximity(proximityMeasurements, proximityMeasurementIndex, SENSOR_PROXIMITY_DETECT_LEFT, SENSOR_PROXIMITY_DETECT_LEFT_PIN);
-  readTOF(tofMeasurements, tofMeasurementIndex, SENSOR_TOF_RIGHT, SENSOR_TOF_RIGHT_TRIGGER_PIN, SENSOR_TOF_RIGHT_ECHO_PIN);
-  readTOF(tofMeasurements, tofMeasurementIndex, SENSOR_TOF_CENTER, SENSOR_TOF_CENTER_TRIGGER_PIN, SENSOR_TOF_CENTER_ECHO_PIN);
-  readTOF(tofMeasurements, tofMeasurementIndex, SENSOR_TOF_LEFT, SENSOR_TOF_LEFT_TRIGGER_PIN, SENSOR_TOF_LEFT_ECHO_PIN);
-  readIMU(imuMeasurements, &imuMeasurementIndex);
-
+  readAll();
 
   // Testing
   if (Serial.available() > 0)
@@ -353,7 +357,7 @@ void stateTest()
       writeMotorSpeed(motorSpeeds, ACTUATOR_MOTOR_RIGHT, ACTUATOR_MOTOR_RIGHT_DIRECTION_PIN, ACTUATOR_MOTOR_RIGHT_SPEED_PIN);
       writeMotorSpeed(motorSpeeds, ACTUATOR_MOTOR_LEFT, ACTUATOR_MOTOR_LEFT_DIRECTION_PIN, ACTUATOR_MOTOR_LEFT_SPEED_PIN);
     }
-    else if (b == 99)
+    else if (b == 100)
     {
       motorSpeeds[ACTUATOR_MOTOR_RIGHT] -= 0.1;
       motorSpeeds[ACTUATOR_MOTOR_LEFT] += 0.1;
@@ -377,15 +381,14 @@ void stateTest()
   }
 
 
-  updateMotorSpeedControl(ACTUATOR_MOTOR_RIGHT, ACTUATOR_MOTOR_RIGHT_DIRECTION_PIN, ACTUATOR_MOTOR_RIGHT_SPEED_PIN, motorPositionMeasurements);
-  updateMotorSpeedControl(ACTUATOR_MOTOR_LEFT, ACTUATOR_MOTOR_LEFT_DIRECTION_PIN, ACTUATOR_MOTOR_LEFT_SPEED_PIN, motorPositionMeasurements);
-  updateServoAngleControl(ACTUATOR_SERVO_BAR_RIGHT, ACTUATOR_SERVO_BAR_RIGHT_PIN);
-  updateServoAngleControl(ACTUATOR_SERVO_BAR_LEFT, ACTUATOR_SERVO_BAR_LEFT_PIN);
+  updateAll();
 
   Serial.print("Z: ");
   Serial.print(getMedianIMUZOrientationValue(imuMeasurements));
   Serial.print("\tIR: ");
-  Serial.println(getAverageProximityValue(proximityMeasurements, SENSOR_PROXIMITY_FORWARD));
+  Serial.print(getAverageProximityValue(proximityMeasurements, SENSOR_PROXIMITY_FORWARD));
+  Serial.print("\tTOF: ");
+  Serial.println(getMedianTOFValue(tofMeasurements, SENSOR_TOF_CENTER));
 //
 //  static double m[2] = {0};
 //
@@ -407,6 +410,11 @@ void stateTestExit()
 }
 
 
+// ================================================================
+// ===                        WANDER STATE                      ===
+// ================================================================
+
+
 // The "s_wander" state
 void stateWanderEnter()
 {
@@ -415,40 +423,22 @@ void stateWanderEnter()
 
 void stateWander()
 {
-  // DEBUG
-  if (Serial.available() > 0)
-  {
-    if (Serial.read() == ' ')
-    {
-      stopMotor(ACTUATOR_MOTOR_RIGHT, ACTUATOR_MOTOR_RIGHT_DIRECTION_PIN, ACTUATOR_MOTOR_RIGHT_SPEED_PIN);
-      stopMotor(ACTUATOR_MOTOR_LEFT, ACTUATOR_MOTOR_LEFT_DIRECTION_PIN, ACTUATOR_MOTOR_LEFT_SPEED_PIN);
-    }
-  }
+  readAll();
 
-  readBtns(btnState);
+  stateWanderRoutine(proximityMeasurements, proximityAmbientMeasurements, proximityAmbientVarianceMeasurements, tofMeasurements, imuMeasurements, motorSpeeds, motorPositionMeasurements, btnState, ledState);
 
-  readProximity(proximityMeasurements, proximityMeasurementIndex, SENSOR_PROXIMITY_RIGHT, SENSOR_PROXIMITY_RIGHT_PIN);
-  readProximity(proximityMeasurements, proximityMeasurementIndex, SENSOR_PROXIMITY_FORWARD_RIGHT, SENSOR_PROXIMITY_FORWARD_RIGHT_PIN);
-  readProximity(proximityMeasurements, proximityMeasurementIndex, SENSOR_PROXIMITY_FORWARD, SENSOR_PROXIMITY_FORWARD_PIN);
-  readProximity(proximityMeasurements, proximityMeasurementIndex, SENSOR_PROXIMITY_FORWARD_LEFT, SENSOR_PROXIMITY_FORWARD_LEFT_PIN);
-  readProximity(proximityMeasurements, proximityMeasurementIndex, SENSOR_PROXIMITY_LEFT, SENSOR_PROXIMITY_LEFT_PIN);
-  readProximity(proximityMeasurements, proximityMeasurementIndex, SENSOR_PROXIMITY_BACKWARD, SENSOR_PROXIMITY_BACKWARD_PIN);
-  readProximity(proximityMeasurements, proximityMeasurementIndex, SENSOR_PROXIMITY_DOWN_RIGHT, SENSOR_PROXIMITY_DOWN_RIGHT_PIN);
-  readProximity(proximityMeasurements, proximityMeasurementIndex, SENSOR_PROXIMITY_DOWN_LEFT, SENSOR_PROXIMITY_DOWN_LEFT_PIN);
-  readProximity(proximityMeasurements, proximityMeasurementIndex, SENSOR_PROXIMITY_DETECT_RIGHT, SENSOR_PROXIMITY_DETECT_RIGHT_PIN);
-  readProximity(proximityMeasurements, proximityMeasurementIndex, SENSOR_PROXIMITY_DETECT_LEFT, SENSOR_PROXIMITY_DETECT_LEFT_PIN);
-  readTOF(tofMeasurements, tofMeasurementIndex, SENSOR_TOF_RIGHT, SENSOR_TOF_RIGHT_TRIGGER_PIN, SENSOR_TOF_RIGHT_ECHO_PIN);
-  readTOF(tofMeasurements, tofMeasurementIndex, SENSOR_TOF_CENTER, SENSOR_TOF_CENTER_TRIGGER_PIN, SENSOR_TOF_CENTER_ECHO_PIN);
-  readTOF(tofMeasurements, tofMeasurementIndex, SENSOR_TOF_LEFT, SENSOR_TOF_LEFT_TRIGGER_PIN, SENSOR_TOF_LEFT_ECHO_PIN);
-  readIMU(imuMeasurements, &imuMeasurementIndex);
-
-  stateWanderRoutine(proximityMeasurements, tofMeasurements, imuMeasurements, motorSpeeds, motorPositionMeasurements, ledState);
+  updateAll();
 }
 
 void stateWanderExit()
 {
   stateWanderExitRoutine(motorSpeeds, ledState);
 }
+
+// ================================================================
+// ===                        ANALYSIS STATE                    ===
+// ================================================================
+
 
 // The "s_analysis" state
 void stateAnalysisEnter()
@@ -458,6 +448,30 @@ void stateAnalysisEnter()
 
 void stateAnalysis()
 {
+  readAll();
+
+  stateAnalysisRoutine(proximityMeasurements, tofMeasurements, imuMeasurements, motorSpeeds, motorPositionMeasurements, ledState);
+
+  updateAll();
+}
+
+void stateAnalysisExit()
+{
+  stateAnalysisExitRoutine(ledState);
+}
+
+
+
+
+
+
+
+
+/**
+ * Read all
+ */
+void readAll()
+{
   readBtns(btnState);
 
   readProximity(proximityMeasurements, proximityMeasurementIndex, SENSOR_PROXIMITY_RIGHT, SENSOR_PROXIMITY_RIGHT_PIN);
@@ -470,17 +484,27 @@ void stateAnalysis()
   readProximity(proximityMeasurements, proximityMeasurementIndex, SENSOR_PROXIMITY_DOWN_LEFT, SENSOR_PROXIMITY_DOWN_LEFT_PIN);
   readProximity(proximityMeasurements, proximityMeasurementIndex, SENSOR_PROXIMITY_DETECT_RIGHT, SENSOR_PROXIMITY_DETECT_RIGHT_PIN);
   readProximity(proximityMeasurements, proximityMeasurementIndex, SENSOR_PROXIMITY_DETECT_LEFT, SENSOR_PROXIMITY_DETECT_LEFT_PIN);
-  readTOF(tofMeasurements, tofMeasurementIndex, SENSOR_TOF_RIGHT, SENSOR_TOF_RIGHT_TRIGGER_PIN, SENSOR_TOF_RIGHT_ECHO_PIN);
-  readTOF(tofMeasurements, tofMeasurementIndex, SENSOR_TOF_CENTER, SENSOR_TOF_CENTER_TRIGGER_PIN, SENSOR_TOF_CENTER_ECHO_PIN);
-  readTOF(tofMeasurements, tofMeasurementIndex, SENSOR_TOF_LEFT, SENSOR_TOF_LEFT_TRIGGER_PIN, SENSOR_TOF_LEFT_ECHO_PIN);
-  readIMU(imuMeasurements, &imuMeasurementIndex);
 
-  stateAnalysisRoutine(proximityMeasurements, tofMeasurements, imuMeasurements, motorSpeeds, motorPositionMeasurements, ledState);
+  // Only look at one tof each time
+  static int tofIndex = 0;
+  if (tofIndex == 0) readTOF(tofMeasurements, tofMeasurementIndex, SENSOR_TOF_RIGHT, SENSOR_TOF_RIGHT_TRIGGER_PIN, SENSOR_TOF_RIGHT_ECHO_PIN);
+  if (tofIndex == 1) readTOF(tofMeasurements, tofMeasurementIndex, SENSOR_TOF_CENTER, SENSOR_TOF_CENTER_TRIGGER_PIN, SENSOR_TOF_CENTER_ECHO_PIN);
+  if (tofIndex == 2) readTOF(tofMeasurements, tofMeasurementIndex, SENSOR_TOF_LEFT, SENSOR_TOF_LEFT_TRIGGER_PIN, SENSOR_TOF_LEFT_ECHO_PIN);
+  if (++tofIndex == 3) tofIndex = 0; 
+  
+  readIMU(imuMeasurements, &imuMeasurementIndex);
 }
 
-void stateAnalysisExit()
+
+/**
+ * Update all
+ */
+void updateAll()
 {
-  stateAnalysisExitRoutine(ledState);
+  updateMotorSpeedControl(ACTUATOR_MOTOR_RIGHT, ACTUATOR_MOTOR_RIGHT_DIRECTION_PIN, ACTUATOR_MOTOR_RIGHT_SPEED_PIN, motorPositionMeasurements);
+  updateMotorSpeedControl(ACTUATOR_MOTOR_LEFT, ACTUATOR_MOTOR_LEFT_DIRECTION_PIN, ACTUATOR_MOTOR_LEFT_SPEED_PIN, motorPositionMeasurements);
+  updateServoAngleControl(ACTUATOR_SERVO_BAR_RIGHT, ACTUATOR_SERVO_BAR_RIGHT_PIN);
+  updateServoAngleControl(ACTUATOR_SERVO_BAR_LEFT, ACTUATOR_SERVO_BAR_LEFT_PIN);
 }
 
 /**

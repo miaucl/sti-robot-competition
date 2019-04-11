@@ -30,7 +30,7 @@ State checkStateTransition( State currentState,
   else if (currentState == s_calibration)
   {
     // Perform an automatic transition to the test state once the system is calibrated
-    return s_test;
+    return s_wander;
   }
 
 

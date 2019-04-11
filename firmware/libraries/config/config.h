@@ -79,8 +79,8 @@
 #define ACTUATOR_MOTOR_TRANSMISSION 75
 #define ACTUATOR_MOTOR_DIAMETER 0.12f // m
 #define ACTUATOR_MOTOR_MAX_SLEW_RATE 1.f
-#define ACTUATOR_MOTOR_PID_KP 400.f
-#define ACTUATOR_MOTOR_PID_KI 600.f
+#define ACTUATOR_MOTOR_PID_KP 300.f
+#define ACTUATOR_MOTOR_PID_KI 400.f
 #define ACTUATOR_MOTOR_PID_KD 20.f
 
 #define ACTUATOR_SERVO_COUNT 2
@@ -155,8 +155,11 @@ enum State
   s_panic             // Panic state, when something unexpected happened
 };
 
-// Wander
-#define WANDER_SPEED 0.3f
+// s_wander
+#define WANDER_SPEED 0.6f
+#define WANDER_TURNING_SPEED 0.4f
+#define WANDER_TURN_DURATION 2000
+#define WANDER_STOPPING_THRESHOLD 0.001
 
 
 #endif

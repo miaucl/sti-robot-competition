@@ -231,10 +231,10 @@ float ypr[3];           // [yaw, pitch, roll]   yaw/pitch/roll container and gra
 // ===               INTERRUPT DETECTION ROUTINE                ===
 // ================================================================
 
-volatile bool mpuInterrupt = false;     // indicates whether MPU interrupt pin has gone high
+volatile int mpuInterrupt = 0;     // indicates whether MPU interrupt pin has gone high
 void dmpDataReady()
 {
-  mpuInterrupt = true;
+  mpuInterrupt++;
 }
 
 
@@ -372,7 +372,7 @@ void calibrateIMU()
   for (int i = 0; i<SENSOR_IMU_MEASUREMENT_COUNT;)
   {
     static unsigned long LastGoodPacketTime;
-    mpuInterrupt = false;
+    mpuInterrupt = 0;
     FifoAlive = 1;
     fifoCount = mpu.getFIFOCount();
     // we have failed Reset and wait till next time!
@@ -388,7 +388,7 @@ void calibrateIMU()
       #endif
 
       // Get the packets until we have the latest!
-      while (fifoCount  >= packetSize)
+      while (fifoCount >= packetSize)
       {
         // lets do the magic and get the data
         mpu.getFIFOBytes(fifoBuffer, packetSize);
@@ -419,9 +419,10 @@ void calibrateIMU()
 void readIMU( float imuMeasurements[SENSOR_IMU_MEASUREMENT_DIMENSIONS][SENSOR_IMU_MEASUREMENT_COUNT],
               int *imuMeasurementIndex)
 {
+  if (mpuInterrupt == 0) return;
   //Serial.print(">");
   static unsigned long LastGoodPacketTime;
-  mpuInterrupt = false;
+  mpuInterrupt = 0;
   FifoAlive = 1;
   fifoCount = mpu.getFIFOCount();
   //Serial.print("f");
