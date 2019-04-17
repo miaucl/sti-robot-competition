@@ -450,7 +450,7 @@ void stateAnalysis()
 {
   readAll();
 
-  stateAnalysisRoutine(proximityMeasurements, tofMeasurements, imuMeasurements, motorSpeeds, motorPositionMeasurements, ledState);
+  stateAnalysisRoutine(proximityMeasurements, proximityAmbientMeasurements, proximityAmbientVarianceMeasurements, tofMeasurements, imuMeasurements, motorSpeeds, motorPositionMeasurements, btnState, ledState);
 
   updateAll();
 }
