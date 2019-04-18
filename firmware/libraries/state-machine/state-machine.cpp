@@ -29,8 +29,12 @@ State checkStateTransition( State currentState,
    */
   else if (currentState == s_calibration)
   {
-    // Perform an automatic transition to the test state once the system is calibrated
-    return s_analysis;
+    // Wait for the START button to be pressed to start the robot
+    if (btnState[BTN_START])
+    {
+      return s_following;
+    }
+
   }
 
 
@@ -42,7 +46,7 @@ State checkStateTransition( State currentState,
    */
   else if (currentState == s_idle)
   {
-    // Wait for the START button to be pressed to start the robot
+    // Wait for the START button to be pressed to calibrate the robot
     if (btnState[BTN_START])
     {
       return s_calibration;

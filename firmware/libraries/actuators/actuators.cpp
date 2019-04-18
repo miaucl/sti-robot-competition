@@ -20,7 +20,7 @@ static double measuredMotorSpeeds[ACTUATOR_MOTOR_COUNT] = {0};
 static long ticks[ACTUATOR_MOTOR_COUNT] = {0};
 static long lastMotorUpdateTimestamp[ACTUATOR_MOTOR_COUNT] = {micros(), micros()};
 
-static boolean useRawValues = false;
+static boolean rawInput = false;
 
 void encoderTickRight() { ticks[ACTUATOR_MOTOR_RIGHT]++; }
 void encoderTickLeft() { ticks[ACTUATOR_MOTOR_LEFT]++; }
@@ -57,7 +57,7 @@ void configureMotor(int id,
 
 float calculateNextIntermediateSpeed(float targetMotorSpeed, float intermediateMotorSpeed)
 {
-  if (intermediateMotorSpeed == targetMotorSpeed) return targetMotorSpeed;
+  if (intermediateMotorSpeed == targetMotorSpeed || rawInput) return targetMotorSpeed;
   // Serial.print(targetMotorSpeed);
   // Serial.print("\t");
   // Serial.print(intermediateMotorSpeed);
@@ -82,9 +82,8 @@ void writeMotorSpeed( double motorSpeeds[ACTUATOR_MOTOR_COUNT],
   // Bound speed
   targetMotorSpeeds[id] = min(max(targetMotorSpeeds[id], -ACTUATOR_MOTOR_SPEED_MAX), ACTUATOR_MOTOR_SPEED_MAX);
 
+  rawInput = false;
   intermediateMotorSpeeds[id] = calculateNextIntermediateSpeed(targetMotorSpeeds[id], measuredMotorSpeeds[id]);
-
-  useRawValues = false;
 }
 
 void writeRawMotorSpeed(double motorSpeeds[ACTUATOR_MOTOR_COUNT],
@@ -99,7 +98,8 @@ void writeRawMotorSpeed(double motorSpeeds[ACTUATOR_MOTOR_COUNT],
   // Bound speed
   targetMotorSpeeds[id] = min(max(targetMotorSpeeds[id], -ACTUATOR_MOTOR_SPEED_MAX), ACTUATOR_MOTOR_SPEED_MAX);
 
-  useRawValues = true;
+  rawInput = true;
+  intermediateMotorSpeeds[id] = targetMotorSpeeds[id];
 }
 
 
@@ -147,44 +147,33 @@ void updateMotorSpeedControl( int id,
     measuredMotorSpeeds[id] = meterPerSecond;
   }
 
-  // Use raw values for the motor
-  if (useRawValues)
+  // Get new intermediate motor speed
+  intermediateMotorSpeeds[id] = calculateNextIntermediateSpeed(targetMotorSpeeds[id], intermediateMotorSpeeds[id]);
+
+  // Run PID Controller
+  autoPID[id]->run();
+
+  // Test outputs CSV
+  // if (id == 0)
+  // {
+  //   Serial.print(intermediateMotorSpeeds[0]);
+  //   Serial.print(',');
+  //   Serial.print(measuredMotorSpeeds[0]);
+  //   Serial.print(',');
+  //   Serial.println(controlMotorSpeeds[0]);
+  // }
+
+  // Stop if value is 0
+  if (intermediateMotorSpeeds[id] == 0)
   {
     autoPID[id]->reset();
-    analogWrite(speedPin, abs(targetMotorSpeeds[id]));
-    digitalWrite(directionPin, targetMotorSpeeds[id] < 0);
+    analogWrite(speedPin, 0);
   }
-  // Use inbuilt PID controller for the motor
+  // PID control value
   else
   {
-    // Get new intermediate motor speed
-    intermediateMotorSpeeds[id] = calculateNextIntermediateSpeed(targetMotorSpeeds[id], intermediateMotorSpeeds[id]);
-
-    // Run PID Controller
-    autoPID[id]->run();
-
-    // Test outputs CSV
-    // if (id == 0)
-    // {
-    //   Serial.print(intermediateMotorSpeeds[0]);
-    //   Serial.print(',');
-    //   Serial.println(measuredMotorSpeeds[0]);
-    //   Serial.print(',');
-    //   Serial.print(controlMotorSpeeds[0]);
-    // }
-
-    // Stop if value is 0
-    if (intermediateMotorSpeeds[id] == 0)
-    {
-      autoPID[id]->reset();
-      analogWrite(speedPin, 0);
-    }
-    // PID control value
-    else
-    {
-      analogWrite(speedPin, abs(controlMotorSpeeds[id]));
-      digitalWrite(directionPin, controlMotorSpeeds[id] < 0);
-    }
+    analogWrite(speedPin, abs(controlMotorSpeeds[id]));
+    digitalWrite(directionPin, controlMotorSpeeds[id] < 0);
   }
 
   // Save timestamp
