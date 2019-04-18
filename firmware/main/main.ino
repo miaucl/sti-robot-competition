@@ -388,7 +388,7 @@ void stateTest()
   Serial.print("\tIR: ");
   Serial.print(getAverageProximityValue(proximityMeasurements, SENSOR_PROXIMITY_FORWARD));
   Serial.print("\tTOF: ");
-  Serial.println(getMedianTOFValue(tofMeasurements, SENSOR_TOF_CENTER));
+  Serial.println(getFilteredAverageTOFValue(tofMeasurements, SENSOR_TOF_CENTER));
 //
 //  static double m[2] = {0};
 //

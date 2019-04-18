@@ -21,6 +21,15 @@ void writeMotorSpeed( double motorSpeeds[ACTUATOR_MOTOR_COUNT],
                       int speedPin);
 
 /**
+ * Write the raw motor speeds
+ */
+void writeRawMotorSpeed(double motorSpeeds[ACTUATOR_MOTOR_COUNT],
+                        int id,
+                        int directionPin,
+                        int speedPin);
+
+
+/**
  * Stop the motor
  */
 void stopMotor( int id,
