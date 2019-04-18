@@ -6,7 +6,7 @@
 #define Config_h
 
 // Constants
-#define M_PI 3.141592653589793238462643
+//#define M_PI 3.141592653589793238462643
 
 
 /**
@@ -79,8 +79,8 @@
 #define ACTUATOR_MOTOR_TRANSMISSION 75
 #define ACTUATOR_MOTOR_DIAMETER 0.12f // m
 #define ACTUATOR_MOTOR_MAX_SLEW_RATE 2.f
-#define ACTUATOR_MOTOR_PID_KP 300.f
-#define ACTUATOR_MOTOR_PID_KI 400.f
+#define ACTUATOR_MOTOR_PID_KP 100.f
+#define ACTUATOR_MOTOR_PID_KI 200.f
 #define ACTUATOR_MOTOR_PID_KD 20.f
 
 #define ACTUATOR_SERVO_COUNT 2
@@ -147,7 +147,7 @@ enum State
   s_calibration,          // Calibrate all sensors and actuators
   s_idle,                 // Idle state, waiting for start
   s_test,                 // Testing state to test all features manually
-  s_analysis,             // Use to make some analysis on the behaviour
+  s_following,             // Use to make some following on the behaviour
   s_wander,               // Wander around, evade obstacles with TOF and detect bottles with IR
 
   s_turn,
@@ -162,6 +162,17 @@ enum State
 #define WANDER_STOPPING_THRESHOLD 0.001
 #define WANDER_TOF_THRESHOLD 32
 #define WANDER_PROXIMITY_THRESHOLD 80
+
+// s_following
+#define FOLLOWING_WALL_SPEED 0.4f
+//#define WALL_CALIBRATING_SPEED 0.4f
+//#define WALL_CALIBRATION_THRESHOLD 10
+#define FOLLOWING_WALL_RIGHT 0
+#define FOLLOWING_WALL_LEFT 0
+#define FOLLOWING_WALL_CORNER_DETECTED_THRESHOLD 300
+#define FOLLOWING_WALL_DESIRED_WALL_DISTANCE 160
+#define FOLLOWING_WALL_REACTIVITY 0.0025
+#define FOLLOWING_WALL_STOPPING_THRESHOLD 0.001
 
 
 #endif

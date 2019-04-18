@@ -8,7 +8,7 @@
 #include "leds.h"
 #include "actuators.h"
 #include "state-machine.h"
-#include "state-analysis.h"
+#include "state-following.h"
 #include "state-wander.h"
 
 /*********
@@ -185,7 +185,7 @@ void loop()
       case s_idle: stateIdleExit(); break;
       case s_wander: stateWanderExit(); break;
       case s_test: stateTestExit(); break;
-      case s_analysis: stateAnalysisExit(); break;
+      case s_following: stateFollowingExit(); break;
     }
 
     // Enter next state
@@ -196,7 +196,7 @@ void loop()
       case s_idle: stateIdleEnter(); break;
       case s_wander: stateWanderEnter(); break;
       case s_test: stateTestEnter(); break;
-      case s_analysis: stateTestEnter(); break;
+      case s_following: stateTestEnter(); break;
     }
 
     // Set next state
@@ -214,7 +214,7 @@ void loop()
     case s_idle: stateIdle(); break;
     case s_wander: stateWander(); break;
     case s_test: stateTest(); break;
-    case s_analysis: stateAnalysis(); break;
+    case s_following: stateFollowing(); break;
   }
 
   // Feedback
@@ -256,10 +256,7 @@ void stateInitializationExit()
 void stateCalibrationEnter()
 {
   ledState[LED_SYSTEM] = HIGH;
-}
 
-void stateCalibration()
-{
   #ifdef SERIAL_ENABLE
   Serial.println("Calibrate Sensors");
   #endif
@@ -280,7 +277,10 @@ void stateCalibration()
   calibrateTOF(SENSOR_TOF_CENTER, SENSOR_TOF_CENTER_TRIGGER_PIN, SENSOR_TOF_CENTER_ECHO_PIN);
   calibrateTOF(SENSOR_TOF_LEFT, SENSOR_TOF_LEFT_TRIGGER_PIN, SENSOR_TOF_LEFT_ECHO_PIN);
   calibrateIMU();
+}
 
+void stateCalibration()
+{
   readBtns(btnState);
 }
 
@@ -323,6 +323,8 @@ void stateTest()
 {
   readAll();
 
+  static boolean raw = false;
+
   // Testing
   if (Serial.available() > 0)
   {
@@ -333,52 +335,57 @@ void stateTest()
     {
       motorSpeeds[ACTUATOR_MOTOR_RIGHT] = 0;
       motorSpeeds[ACTUATOR_MOTOR_LEFT] = 0;
-      writeMotorSpeed(motorSpeeds, ACTUATOR_MOTOR_RIGHT, ACTUATOR_MOTOR_RIGHT_DIRECTION_PIN, ACTUATOR_MOTOR_RIGHT_SPEED_PIN);
-      writeMotorSpeed(motorSpeeds, ACTUATOR_MOTOR_LEFT, ACTUATOR_MOTOR_LEFT_DIRECTION_PIN, ACTUATOR_MOTOR_LEFT_SPEED_PIN);
     }
     else if (b == 119)
     {
       motorSpeeds[ACTUATOR_MOTOR_RIGHT] += 0.1;
       motorSpeeds[ACTUATOR_MOTOR_LEFT] += 0.1;
-      writeMotorSpeed(motorSpeeds, ACTUATOR_MOTOR_RIGHT, ACTUATOR_MOTOR_RIGHT_DIRECTION_PIN, ACTUATOR_MOTOR_RIGHT_SPEED_PIN);
-      writeMotorSpeed(motorSpeeds, ACTUATOR_MOTOR_LEFT, ACTUATOR_MOTOR_LEFT_DIRECTION_PIN, ACTUATOR_MOTOR_LEFT_SPEED_PIN);
     }
     else if (b == 115)
     {
       motorSpeeds[ACTUATOR_MOTOR_RIGHT] -= 0.1;
       motorSpeeds[ACTUATOR_MOTOR_LEFT] -= 0.1;
-      writeMotorSpeed(motorSpeeds, ACTUATOR_MOTOR_RIGHT, ACTUATOR_MOTOR_RIGHT_DIRECTION_PIN, ACTUATOR_MOTOR_RIGHT_SPEED_PIN);
-      writeMotorSpeed(motorSpeeds, ACTUATOR_MOTOR_LEFT, ACTUATOR_MOTOR_LEFT_DIRECTION_PIN, ACTUATOR_MOTOR_LEFT_SPEED_PIN);
     }
     else if (b == 97)
     {
       motorSpeeds[ACTUATOR_MOTOR_RIGHT] += 0.1;
       motorSpeeds[ACTUATOR_MOTOR_LEFT] -= 0.1;
-      writeMotorSpeed(motorSpeeds, ACTUATOR_MOTOR_RIGHT, ACTUATOR_MOTOR_RIGHT_DIRECTION_PIN, ACTUATOR_MOTOR_RIGHT_SPEED_PIN);
-      writeMotorSpeed(motorSpeeds, ACTUATOR_MOTOR_LEFT, ACTUATOR_MOTOR_LEFT_DIRECTION_PIN, ACTUATOR_MOTOR_LEFT_SPEED_PIN);
     }
     else if (b == 100)
     {
       motorSpeeds[ACTUATOR_MOTOR_RIGHT] -= 0.1;
       motorSpeeds[ACTUATOR_MOTOR_LEFT] += 0.1;
-      writeMotorSpeed(motorSpeeds, ACTUATOR_MOTOR_RIGHT, ACTUATOR_MOTOR_RIGHT_DIRECTION_PIN, ACTUATOR_MOTOR_RIGHT_SPEED_PIN);
-      writeMotorSpeed(motorSpeeds, ACTUATOR_MOTOR_LEFT, ACTUATOR_MOTOR_LEFT_DIRECTION_PIN, ACTUATOR_MOTOR_LEFT_SPEED_PIN);
     }
     else if (b == 111)
     {
       servoAngles[ACTUATOR_SERVO_BAR_RIGHT] = ACTUATOR_SERVO_BAR_RIGHT_OPEN;
       servoAngles[ACTUATOR_SERVO_BAR_LEFT] = ACTUATOR_SERVO_BAR_LEFT_OPEN;
-      writeServoAngle(servoAngles, ACTUATOR_SERVO_BAR_RIGHT, ACTUATOR_SERVO_BAR_RIGHT_PIN);
-      writeServoAngle(servoAngles, ACTUATOR_SERVO_BAR_LEFT, ACTUATOR_SERVO_BAR_LEFT_PIN);
+
     }
     else if (b == 108)
     {
       servoAngles[ACTUATOR_SERVO_BAR_RIGHT] = ACTUATOR_SERVO_BAR_RIGHT_CLOSED;
-      servoAngles[ACTUATOR_SERVO_BAR_LEFT] = ACTUATOR_SERVO_BAR_LEFT_CLOSED;
-      writeServoAngle(servoAngles, ACTUATOR_SERVO_BAR_RIGHT, ACTUATOR_SERVO_BAR_RIGHT_PIN);
-      writeServoAngle(servoAngles, ACTUATOR_SERVO_BAR_LEFT, ACTUATOR_SERVO_BAR_LEFT_PIN);
+      servoAngles[ACTUATOR_SERVO_BAR_LEFT] = ACTUATOR_SERVO_BAR_LEFT_CLOSED;     
     }
+    else if (b == 46)
+    {
+      raw = !raw;
+    }
+
+    if (raw)
+    {
+      writeRawMotorSpeed(motorSpeeds, ACTUATOR_MOTOR_RIGHT, ACTUATOR_MOTOR_RIGHT_DIRECTION_PIN, ACTUATOR_MOTOR_RIGHT_SPEED_PIN);
+      writeRawMotorSpeed(motorSpeeds, ACTUATOR_MOTOR_LEFT, ACTUATOR_MOTOR_LEFT_DIRECTION_PIN, ACTUATOR_MOTOR_LEFT_SPEED_PIN);
+    }
+    else
+    {
+      writeMotorSpeed(motorSpeeds, ACTUATOR_MOTOR_RIGHT, ACTUATOR_MOTOR_RIGHT_DIRECTION_PIN, ACTUATOR_MOTOR_RIGHT_SPEED_PIN);
+      writeMotorSpeed(motorSpeeds, ACTUATOR_MOTOR_LEFT, ACTUATOR_MOTOR_LEFT_DIRECTION_PIN, ACTUATOR_MOTOR_LEFT_SPEED_PIN);
+    }
+    writeServoAngle(servoAngles, ACTUATOR_SERVO_BAR_RIGHT, ACTUATOR_SERVO_BAR_RIGHT_PIN);
+    writeServoAngle(servoAngles, ACTUATOR_SERVO_BAR_LEFT, ACTUATOR_SERVO_BAR_LEFT_PIN);
   }
+
 
 
   updateAll();
@@ -436,28 +443,28 @@ void stateWanderExit()
 }
 
 // ================================================================
-// ===                        ANALYSIS STATE                    ===
+// ===                        FOLLOWING STATE                   ===
 // ================================================================
 
 
-// The "s_analysis" state
-void stateAnalysisEnter()
+// The "s_following" state
+void stateFollowingEnter()
 {
-  stateAnalysisEnterRoutine(ledState);
+  stateFollowingEnterRoutine(ledState);
 }
 
-void stateAnalysis()
+void stateFollowing()
 {
   readAll();
 
-  stateAnalysisRoutine(proximityMeasurements, tofMeasurements, imuMeasurements, motorSpeeds, motorPositionMeasurements, ledState);
+  stateFollowingRoutine(proximityMeasurements, proximityAmbientMeasurements, proximityAmbientVarianceMeasurements, tofMeasurements, imuMeasurements, motorSpeeds, motorPositionMeasurements, btnState, ledState);
 
   updateAll();
 }
 
-void stateAnalysisExit()
+void stateFollowingExit()
 {
-  stateAnalysisExitRoutine(ledState);
+  stateFollowingExitRoutine(ledState);
 }
 
 
@@ -490,8 +497,8 @@ void readAll()
   if (tofIndex == 0) readTOF(tofMeasurements, tofMeasurementIndex, SENSOR_TOF_RIGHT, SENSOR_TOF_RIGHT_TRIGGER_PIN, SENSOR_TOF_RIGHT_ECHO_PIN);
   if (tofIndex == 1) readTOF(tofMeasurements, tofMeasurementIndex, SENSOR_TOF_CENTER, SENSOR_TOF_CENTER_TRIGGER_PIN, SENSOR_TOF_CENTER_ECHO_PIN);
   if (tofIndex == 2) readTOF(tofMeasurements, tofMeasurementIndex, SENSOR_TOF_LEFT, SENSOR_TOF_LEFT_TRIGGER_PIN, SENSOR_TOF_LEFT_ECHO_PIN);
-  if (++tofIndex == 3) tofIndex = 0; 
-  
+  if (++tofIndex == 3) tofIndex = 0;
+
   readIMU(imuMeasurements, &imuMeasurementIndex);
 }
 

@@ -20,6 +20,8 @@ static double measuredMotorSpeeds[ACTUATOR_MOTOR_COUNT] = {0};
 static long ticks[ACTUATOR_MOTOR_COUNT] = {0};
 static long lastMotorUpdateTimestamp[ACTUATOR_MOTOR_COUNT] = {micros(), micros()};
 
+static boolean rawInput = false;
+
 void encoderTickRight() { ticks[ACTUATOR_MOTOR_RIGHT]++; }
 void encoderTickLeft() { ticks[ACTUATOR_MOTOR_LEFT]++; }
 
@@ -55,7 +57,7 @@ void configureMotor(int id,
 
 float calculateNextIntermediateSpeed(float targetMotorSpeed, float intermediateMotorSpeed)
 {
-  if (intermediateMotorSpeed == targetMotorSpeed) return targetMotorSpeed;
+  if (intermediateMotorSpeed == targetMotorSpeed || rawInput) return targetMotorSpeed;
   // Serial.print(targetMotorSpeed);
   // Serial.print("\t");
   // Serial.print(intermediateMotorSpeed);
@@ -80,9 +82,24 @@ void writeMotorSpeed( double motorSpeeds[ACTUATOR_MOTOR_COUNT],
   // Bound speed
   targetMotorSpeeds[id] = min(max(targetMotorSpeeds[id], -ACTUATOR_MOTOR_SPEED_MAX), ACTUATOR_MOTOR_SPEED_MAX);
 
+  rawInput = false;
   intermediateMotorSpeeds[id] = calculateNextIntermediateSpeed(targetMotorSpeeds[id], measuredMotorSpeeds[id]);
+}
 
-  // digitalWrite(directionPin, motorSpeeds[id] < 0);
+void writeRawMotorSpeed(double motorSpeeds[ACTUATOR_MOTOR_COUNT],
+                        int id,
+                        int directionPin,
+                        int speedPin)
+{
+  // Save value
+  targetMotorSpeeds[id] = motorSpeeds[id];
+  intermediateMotorSpeeds[id] = measuredMotorSpeeds[id];
+
+  // Bound speed
+  targetMotorSpeeds[id] = min(max(targetMotorSpeeds[id], -ACTUATOR_MOTOR_SPEED_MAX), ACTUATOR_MOTOR_SPEED_MAX);
+
+  rawInput = true;
+  intermediateMotorSpeeds[id] = targetMotorSpeeds[id];
 }
 
 
@@ -141,9 +158,9 @@ void updateMotorSpeedControl( int id,
   // {
   //   Serial.print(intermediateMotorSpeeds[0]);
   //   Serial.print(',');
-  //   Serial.println(measuredMotorSpeeds[0]);
+  //   Serial.print(measuredMotorSpeeds[0]);
   //   Serial.print(',');
-  //   Serial.print(controlMotorSpeeds[0]);
+  //   Serial.println(controlMotorSpeeds[0]);
   // }
 
   // Stop if value is 0
