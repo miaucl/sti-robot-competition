@@ -160,39 +160,33 @@ void readTOF( int tofMeasurements[SENSOR_TOF_COUNT][SENSOR_TOF_MEASUREMENT_COUNT
 }
 
 
-// Get the median value
-int getMedianTOFValue(int tofMeasurements[SENSOR_TOF_COUNT][SENSOR_TOF_MEASUREMENT_COUNT],
-                      int id)
+// Get the filtered average value
+int getFilteredAverageTOFValue( int tofMeasurements[SENSOR_TOF_COUNT][SENSOR_TOF_MEASUREMENT_COUNT],
+                                int id)
 {
-  // Calculate the median of the past measurements
-
-  // Copy values
-  int sortedMeasurements[SENSOR_TOF_MEASUREMENT_COUNT] = {0};
+  float value = 0.f;
+  int count = 0;
   for (int i = 0; i<SENSOR_TOF_MEASUREMENT_COUNT; i++)
   {
-    sortedMeasurements[i] = tofMeasurements[id][i];
+    if (tofMeasurements[id][i] > 0)
+    {
+      value += tofMeasurements[id][i];
+      count++;
+    }
   }
 
-  // Sort values
-  int sortedMeasurementsLength = sizeof(sortedMeasurements) / sizeof(sortedMeasurements[0]);
-  qsort(sortedMeasurements, sortedMeasurementsLength, sizeof(sortedMeasurements[0]), sort_asc);
-
-
-  // Take the middle part and average
-  int medianMeasurement = 0;
-  for (int i = SENSOR_TOF_MEASUREMENT_COUNT/3; i<SENSOR_TOF_MEASUREMENT_COUNT - (SENSOR_TOF_MEASUREMENT_COUNT/3); i++)
+  if (count > 1)
   {
-    medianMeasurement += sortedMeasurements[i];
+    value /= (float)count;
   }
-  medianMeasurement /= SENSOR_TOF_MEASUREMENT_COUNT - (2 * (SENSOR_TOF_MEASUREMENT_COUNT/3));
-  return medianMeasurement;
+  return value;
 }
 
 // Check if the tof value is over the threshold
 boolean checkTOFThreshold(int tofMeasurements[SENSOR_TOF_COUNT][SENSOR_TOF_MEASUREMENT_COUNT],
                           int id)
 {
-  int medianMeasurement = getMedianTOFValue(tofMeasurements, id);
+  int medianMeasurement = getFilteredAverageTOFValue(tofMeasurements, id);
 
   return (medianMeasurement > 0);
 }

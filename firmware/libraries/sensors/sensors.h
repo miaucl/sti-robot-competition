@@ -67,10 +67,10 @@ void readTOF( int tofMeasurements[SENSOR_TOF_COUNT][SENSOR_TOF_MEASUREMENT_COUNT
               int echoPin);
 
 /**
- * Get the median value
+ * Get the filtered tof value
  */
-int getMedianTOFValue(int tofMeasurements[SENSOR_TOF_COUNT][SENSOR_TOF_MEASUREMENT_COUNT],
-                      int id);
+int getFilteredAverageTOFValue(int tofMeasurements[SENSOR_TOF_COUNT][SENSOR_TOF_MEASUREMENT_COUNT],
+                               int id);
 
 
 /**
