@@ -10,6 +10,7 @@
 #include "state-machine.h"
 #include "state-following.h"
 #include "state-wander.h"
+#include "state-swallowing.h"
 
 /*********
  * Global values
@@ -186,6 +187,7 @@ void loop()
       case s_wander: stateWanderExit(); break;
       case s_test: stateTestExit(); break;
       case s_following: stateFollowingExit(); break;
+      case s_swallowing: stateSwallowingExit(); break;
     }
 
     // Enter next state
@@ -197,6 +199,7 @@ void loop()
       case s_wander: stateWanderEnter(); break;
       case s_test: stateTestEnter(); break;
       case s_following: stateTestEnter(); break;
+      case s_swallowing: stateSwallowingEnter(); break;
     }
 
     // Set next state
@@ -215,6 +218,7 @@ void loop()
     case s_wander: stateWander(); break;
     case s_test: stateTest(); break;
     case s_following: stateFollowing(); break;
+    case s_swallowing: stateSwallowing(); break;
   }
 
   // Feedback
@@ -469,6 +473,30 @@ void stateFollowingExit()
 
 
 
+// ================================================================
+// ===                       SWALLOWING STATE                   ===
+// ================================================================
+
+
+// The "s_swallowing" state
+void stateSwallowingEnter()
+{
+  stateSwallowingEnterRoutine(ledState);
+}
+
+void stateSwallowing()
+{
+  readAll();
+
+  stateSwallowingRoutine(proximityMeasurements, proximityAmbientMeasurements, proximityAmbientVarianceMeasurements, tofMeasurements, imuMeasurements, motorSpeeds, motorPositionMeasurements, btnState, ledState);
+
+  updateAll();
+}
+
+void stateSwallowingExit()
+{
+  stateSwallowingExitRoutine(ledState);
+}
 
 
 

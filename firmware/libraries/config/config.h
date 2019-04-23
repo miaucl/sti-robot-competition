@@ -149,6 +149,7 @@ enum State
   s_test,                 // Testing state to test all features manually
   s_following,             // Use to make some following on the behaviour
   s_wander,               // Wander around, evade obstacles with TOF and detect bottles with IR
+  s_swallowing,           // Turning to have bottle in front and swallowing bottle
 
   s_turn,
   s_wait,
@@ -174,5 +175,13 @@ enum State
 #define FOLLOWING_WALL_REACTIVITY 0.0025
 #define FOLLOWING_WALL_STOPPING_THRESHOLD 0.001
 
-
+// s_swallowing
+#define SWALLOWING_TURNING_SPEED 0.4f
+#define SWALLOWING_TURNING_THRESHOLD -40
+#define SWALLOWING_STOPPING_THRESHOLD 0.001
+#define SWALLOWING_TOF_THRESHOLD 32
+#define SWALLOWING_PROXIMITY_THRESHOLD 80
+#define SWALLOWING_SPEED 0.4f
+#define SWALLOWING_DURATION 3000
+#define SWALLOWING_BOTTLE_DETECTION_THRESHOLD 50
 #endif
