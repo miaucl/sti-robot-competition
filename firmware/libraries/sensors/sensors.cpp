@@ -363,46 +363,46 @@ void calibrateIMU()
   // }
 
 
-  for (int i = 0; i<SENSOR_IMU_MEASUREMENT_COUNT;)
-  {
-    static unsigned long LastGoodPacketTime;
-    mpuInterrupt = 0;
-    FifoAlive = 1;
-    fifoCount = mpu.getFIFOCount();
-    // we have failed Reset and wait till next time!
-    if ((!fifoCount) || (fifoCount % packetSize))
-    {
-      // clear the buffer and start over
-      mpu.resetFIFO();
-    }
-    else
-    {
-      #ifdef SERIAL_ENABLE
-      Serial.print(".");
-      #endif
-
-      // Get the packets until we have the latest!
-      while (fifoCount >= packetSize)
-      {
-        // lets do the magic and get the data
-        mpu.getFIFOBytes(fifoBuffer, packetSize);
-        fifoCount -= packetSize;
-      }
-      LastGoodPacketTime = millis();
-      MPUMath(fifoBuffer); // <<<<<<<<<<<<< On success MPUMath() <<<<<<<<<<<<<<<
-
-      // #ifdef SERIAL_ENABLE
-      // Serial.print("ypr\t");
-      // Serial.print(ypr[0]);
-      // Serial.print("\t");
-      // Serial.print(ypr[1]);
-      // Serial.print("\t");
-      // Serial.println(ypr[2]);
-      // #endif
-
-      i++;
-    }
-  }
+  // for (int i = 0; i<SENSOR_IMU_MEASUREMENT_COUNT;)
+  // {
+  //   static unsigned long LastGoodPacketTime;
+  //   mpuInterrupt = 0;
+  //   FifoAlive = 1;
+  //   fifoCount = mpu.getFIFOCount();
+  //   // we have failed Reset and wait till next time!
+  //   if ((!fifoCount) || (fifoCount % packetSize))
+  //   {
+  //     // clear the buffer and start over
+  //     mpu.resetFIFO();
+  //   }
+  //   else
+  //   {
+  //     #ifdef SERIAL_ENABLE
+  //     Serial.print(".");
+  //     #endif
+  //
+  //     // Get the packets until we have the latest!
+  //     while (fifoCount >= packetSize)
+  //     {
+  //       // lets do the magic and get the data
+  //       mpu.getFIFOBytes(fifoBuffer, packetSize);
+  //       fifoCount -= packetSize;
+  //     }
+  //     LastGoodPacketTime = millis();
+  //     MPUMath(fifoBuffer); // <<<<<<<<<<<<< On success MPUMath() <<<<<<<<<<<<<<<
+  //
+  //     // #ifdef SERIAL_ENABLE
+  //     // Serial.print("ypr\t");
+  //     // Serial.print(ypr[0]);
+  //     // Serial.print("\t");
+  //     // Serial.print(ypr[1]);
+  //     // Serial.print("\t");
+  //     // Serial.println(ypr[2]);
+  //     // #endif
+  //
+  //     i++;
+  //   }
+  // }
 
   #ifdef SERIAL_ENABLE
   Serial.println(" Done!");
@@ -496,14 +496,58 @@ float getMedianIMUZOrientationValue(float imuMeasurements[SENSOR_IMU_MEASUREMENT
   int sortedMeasurementsLength = sizeof(sortedMeasurements) / sizeof(sortedMeasurements[0]);
   qsort(sortedMeasurements, sortedMeasurementsLength, sizeof(sortedMeasurements[0]), sort_asc);
 
+  // Check for overflow
+  boolean overflow = false;
+  int overflowIndex = 0;
+  for (int i = 0; i<SENSOR_IMU_MEASUREMENT_COUNT - 1; i++)
+  {
+    // Too big jump means overflow
+    if (fabsf(sortedMeasurements[i] - sortedMeasurements[i + 1]) > 180.f)
+    {
+      overflow = true;
+      overflowIndex = i;
+      break;
+    }
+  }
+
+  int medianOffset = 0;
+  int medianLength = SENSOR_IMU_MEASUREMENT_COUNT;
+
+  // Use the part with more values
+  if (overflow)
+  {
+    if (overflowIndex > SENSOR_IMU_MEASUREMENT_COUNT / 2)
+    {
+      medianOffset = overflowIndex;
+      medianLength = SENSOR_IMU_MEASUREMENT_COUNT - medianOffset;
+    }
+    else
+    {
+      medianOffset = 0;
+      medianLength = overflowIndex + 1;
+    }
+  }
+
 
   // Take the middle part and average
   float medianMeasurement = 0;
-  for (int i = SENSOR_IMU_MEASUREMENT_COUNT/3; i<SENSOR_IMU_MEASUREMENT_COUNT - (SENSOR_IMU_MEASUREMENT_COUNT/3); i++)
+  for (int i = medianLength/3; i<medianLength - (medianLength/3); i++)
   {
-    medianMeasurement += sortedMeasurements[i];
+    medianMeasurement += sortedMeasurements[medianOffset + i];
   }
-  medianMeasurement /= SENSOR_IMU_MEASUREMENT_COUNT - (2 * (SENSOR_IMU_MEASUREMENT_COUNT/3));
+  medianMeasurement /= medianLength - (2 * (medianLength/3));
+
+  Serial.print(millis());
+  Serial.print(",");
+  Serial.print(medianMeasurement);
+  Serial.print(",");
+  Serial.println(medianMeasurement - SENSOR_IMU_YAW_DRIFT * millis());
+
+  // Compensate for drift
+  medianMeasurement -= SENSOR_IMU_YAW_DRIFT * millis();
+  while (medianMeasurement > 180) medianMeasurement -= 360;
+  while (medianMeasurement < -180) medianMeasurement += 360;
+
   return medianMeasurement;
 }
 

@@ -31,11 +31,17 @@
 #define SENSOR_PROXIMITY_MEASUREMENT_COUNT 8
 #define SENSOR_PROXIMITY_THRESHOLD 400
 #define SENSOR_PROXIMITY_RIGHT 0
+#define SENSOR_PROXIMITY_RIGHT_OFFSET 90
 #define SENSOR_PROXIMITY_FORWARD_RIGHT 1
+#define SENSOR_PROXIMITY_FORWARD_RIGHT_OFFSET 45
 #define SENSOR_PROXIMITY_FORWARD 2
+#define SENSOR_PROXIMITY_FORWARD_OFFSET 0
 #define SENSOR_PROXIMITY_FORWARD_LEFT 3
+#define SENSOR_PROXIMITY_FORWARD_LEFT_OFFSET -45
 #define SENSOR_PROXIMITY_LEFT 4
+#define SENSOR_PROXIMITY_LEFT_OFFSET -90
 #define SENSOR_PROXIMITY_BACKWARD 5
+#define SENSOR_PROXIMITY_BACKWARD_OFFSET 180
 #define SENSOR_PROXIMITY_DOWN_RIGHT 6
 #define SENSOR_PROXIMITY_DOWN_LEFT 7
 #define SENSOR_PROXIMITY_DETECT_RIGHT 8
@@ -57,6 +63,7 @@
 #define SENSOR_IMU_YAW 0
 #define SENSOR_IMU_PITCH 1
 #define SENSOR_IMU_ROLL 2
+#define SENSOR_IMU_YAW_DRIFT -0.0000041f // Earth Rotational Speed
 
 
 #define BTN_COUNT 3
@@ -121,7 +128,7 @@
 #define GLOBAL_PAUSE_BTN 22
 #define GLOBAL_PAUSE_LED 10
 
-#define BTN_START_PIN 23
+#define BTN_START_PIN 25
 
 #define LED_SYSTEM_PIN 30
 #define LED_RUNNING_PIN 31
@@ -143,13 +150,14 @@
  */
 enum State
 {
-  s_initialization,       // Initialization state, only active during set up
-  s_calibration,          // Calibrate all sensors and actuators
-  s_idle,                 // Idle state, waiting for start
-  s_test,                 // Testing state to test all features manually
-  s_following,             // Use to make some following on the behaviour
-  s_wander,               // Wander around, evade obstacles with TOF and detect bottles with IR
-  s_swallowing,           // Turning to have bottle in front and swallowing bottle
+  s_initialization,       //0 Initialization state, only active during set up
+  s_calibration,          //1 Calibrate all sensors and actuators
+  s_idle,                 //2 Idle state, waiting for start
+  s_test,                 //3 Testing state to test all features manually
+  s_following,            //4 Use to make some following on the behaviour
+  s_wander,               //5 Wander around, evade obstacles with TOF and detect bottles with IR
+  s_swallowing,           //6 Turning to have bottle in front and swallowing bottle
+  s_scanning,             //7 Look for bottles (obstacles) in close range
 
   s_turn,
   s_wait,
@@ -182,6 +190,21 @@ enum State
 #define SWALLOWING_TOF_THRESHOLD 32
 #define SWALLOWING_PROXIMITY_THRESHOLD 80
 #define SWALLOWING_SPEED 0.4f
+#define SWALLOWING_OPEN_DURATION 1500
+#define SWALLOWING_DURATION_OFFSET 500
 #define SWALLOWING_DURATION 3000
-#define SWALLOWING_BOTTLE_DETECTION_THRESHOLD 50
+#define SWALLOWING_BOTTLE_DETECTION_THRESHOLD 100
+// s_scanning
+#define SCANNING_TURNING_SPEED 0.2f
+#define SCANNING_TURNING_THRESHOLD -40
+#define SCANNING_STOPPING_THRESHOLD 0.001
+#define SCANNING_Z_DELTA_THRESHOLD 0.1f
+#define SCANNING_ORIENTING_STOPPING_THRESHOLD 10.f
+#define SCANNING_ORIENTING_REACTIVITY 0.005
+#define SCANNING_ORIENTING_MAX_SPEED 0.5f
+#define SCANNING_CHECKING_MEASUREMENTS 32
+#define SCANNING_CHECKING_TOF_THRESHOLD 24.f
+
+
+
 #endif
