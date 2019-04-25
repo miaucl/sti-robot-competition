@@ -398,8 +398,6 @@ void stateTest()
 
   updateAll();
 
-  getMedianIMUZOrientationValue(imuMeasurements);
-
 //  Serial.print("Z: ");
 //  Serial.print(getMedianIMUZOrientationValue(imuMeasurements));
 //  Serial.print("\tIR: ");

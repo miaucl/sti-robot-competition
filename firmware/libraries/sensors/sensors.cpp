@@ -537,12 +537,6 @@ float getMedianIMUZOrientationValue(float imuMeasurements[SENSOR_IMU_MEASUREMENT
   }
   medianMeasurement /= medianLength - (2 * (medianLength/3));
 
-  Serial.print(millis());
-  Serial.print(",");
-  Serial.print(medianMeasurement);
-  Serial.print(",");
-  Serial.println(medianMeasurement - SENSOR_IMU_YAW_DRIFT * millis());
-
   // Compensate for drift
   medianMeasurement -= SENSOR_IMU_YAW_DRIFT * millis();
   while (medianMeasurement > 180) medianMeasurement -= 360;
