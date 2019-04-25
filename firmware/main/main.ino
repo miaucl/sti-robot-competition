@@ -10,6 +10,8 @@
 #include "state-machine.h"
 #include "state-following.h"
 #include "state-wander.h"
+#include "state-swallowing.h"
+#include "state-scanning.h"
 
 /*********
  * Global values
@@ -186,6 +188,8 @@ void loop()
       case s_wander: stateWanderExit(); break;
       case s_test: stateTestExit(); break;
       case s_following: stateFollowingExit(); break;
+      case s_swallowing: stateSwallowingExit(); break;
+      case s_scanning: stateScanningExit(); break;
     }
 
     // Enter next state
@@ -197,6 +201,8 @@ void loop()
       case s_wander: stateWanderEnter(); break;
       case s_test: stateTestEnter(); break;
       case s_following: stateTestEnter(); break;
+      case s_swallowing: stateSwallowingEnter(); break;
+      case s_scanning: stateScanningEnter(); break;
     }
 
     // Set next state
@@ -215,6 +221,8 @@ void loop()
     case s_wander: stateWander(); break;
     case s_test: stateTest(); break;
     case s_following: stateFollowing(); break;
+    case s_swallowing: stateSwallowing(); break;
+    case s_scanning: stateScanning(); break;
   }
 
   // Feedback
@@ -365,7 +373,7 @@ void stateTest()
     else if (b == 108)
     {
       servoAngles[ACTUATOR_SERVO_BAR_RIGHT] = ACTUATOR_SERVO_BAR_RIGHT_CLOSED;
-      servoAngles[ACTUATOR_SERVO_BAR_LEFT] = ACTUATOR_SERVO_BAR_LEFT_CLOSED;     
+      servoAngles[ACTUATOR_SERVO_BAR_LEFT] = ACTUATOR_SERVO_BAR_LEFT_CLOSED;
     }
     else if (b == 46)
     {
@@ -390,12 +398,12 @@ void stateTest()
 
   updateAll();
 
-  Serial.print("Z: ");
-  Serial.print(getMedianIMUZOrientationValue(imuMeasurements));
-  Serial.print("\tIR: ");
-  Serial.print(getAverageProximityValue(proximityMeasurements, SENSOR_PROXIMITY_FORWARD));
-  Serial.print("\tTOF: ");
-  Serial.println(getFilteredAverageTOFValue(tofMeasurements, SENSOR_TOF_CENTER));
+//  Serial.print("Z: ");
+//  Serial.print(getMedianIMUZOrientationValue(imuMeasurements));
+//  Serial.print("\tIR: ");
+//  Serial.print(getAverageProximityValue(proximityMeasurements, SENSOR_PROXIMITY_FORWARD));
+//  Serial.print("\tTOF: ");
+//  Serial.println(getFilteredAverageTOFValue(tofMeasurements, SENSOR_TOF_CENTER));
 //
 //  static double m[2] = {0};
 //
@@ -469,6 +477,56 @@ void stateFollowingExit()
 
 
 
+// ================================================================
+// ===                       SWALLOWING STATE                   ===
+// ================================================================
+
+
+// The "s_swallowing" state
+void stateSwallowingEnter()
+{
+  stateSwallowingEnterRoutine(ledState);
+}
+
+void stateSwallowing()
+{
+  readAll();
+
+  stateSwallowingRoutine(proximityMeasurements, proximityAmbientMeasurements, proximityAmbientVarianceMeasurements, tofMeasurements, imuMeasurements, motorSpeeds, motorPositionMeasurements, servoAngles, btnState, ledState);
+
+  updateAll();
+}
+
+void stateSwallowingExit()
+{
+  stateSwallowingExitRoutine(ledState);
+}
+
+
+// ================================================================
+// ===                       SCANNING STATE                     ===
+// ================================================================
+
+
+// The "s_scanning" state
+void stateScanningEnter()
+{
+  stateScanningEnterRoutine(ledState);
+}
+
+void stateScanning()
+{
+  readAll();
+
+  stateScanningRoutine(proximityMeasurements, proximityAmbientMeasurements, proximityAmbientVarianceMeasurements, tofMeasurements, imuMeasurements, motorSpeeds, motorPositionMeasurements, btnState, ledState);
+
+  updateAll();
+}
+
+void stateScanningExit()
+{
+  stateScanningExitRoutine(ledState);
+}
 
 
 
