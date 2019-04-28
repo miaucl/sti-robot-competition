@@ -29,7 +29,8 @@ static int wallFarMotor = 0;
 static int wallFarMotorDirectionPin = 0;
 static int wallFarMotorSpeedPin = 0;
 
-void stateFollowingEnterRoutine(boolean ledState[LED_COUNT])
+void stateFollowingEnterRoutine(boolean ledState[LED_COUNT],
+                                boolean flags[FLAG_COUNT])
 {
   ledState[LED_RUNNING] = HIGH;
 
@@ -44,9 +45,10 @@ void stateFollowingRoutine(int proximityMeasurements[SENSOR_PROXIMITY_COUNT][SEN
                           int tofMeasurements[SENSOR_TOF_COUNT][SENSOR_TOF_MEASUREMENT_COUNT],
                           float imuMeasurements[SENSOR_IMU_MEASUREMENT_DIMENSIONS][SENSOR_IMU_MEASUREMENT_COUNT],
                           double motorSpeeds[ACTUATOR_MOTOR_COUNT],
-                          double motorPositionMeasurements[ACTUATOR_MOTOR_COUNT],
+                          double motorSpeedMeasurements[ACTUATOR_MOTOR_COUNT],
                           boolean btnState[BTN_COUNT],
-                          boolean ledState[LED_COUNT])
+                          boolean ledState[LED_COUNT],
+                          boolean flags[FLAG_COUNT])
 {
   Serial.print("following wall(");
   Serial.print(is_state);
@@ -153,9 +155,9 @@ void stateFollowingRoutine(int proximityMeasurements[SENSOR_PROXIMITY_COUNT][SEN
   else if (is_state == is_stopping)
   {
     Serial.print("motor: ");
-    Serial.println(motorPositionMeasurements[ACTUATOR_MOTOR_LEFT]);
-    if (motorPositionMeasurements[ACTUATOR_MOTOR_LEFT] < FOLLOWING_WALL_STOPPING_THRESHOLD &&
-        motorPositionMeasurements[ACTUATOR_MOTOR_RIGHT] < FOLLOWING_WALL_STOPPING_THRESHOLD)
+    Serial.println(motorSpeedMeasurements[ACTUATOR_MOTOR_LEFT]);
+    if (motorSpeedMeasurements[ACTUATOR_MOTOR_LEFT] < FOLLOWING_WALL_STOPPING_THRESHOLD &&
+        motorSpeedMeasurements[ACTUATOR_MOTOR_RIGHT] < FOLLOWING_WALL_STOPPING_THRESHOLD)
     {
 
 
@@ -166,7 +168,8 @@ void stateFollowingRoutine(int proximityMeasurements[SENSOR_PROXIMITY_COUNT][SEN
 }
 
 
-void stateFollowingExitRoutine(boolean ledState[LED_COUNT])
+void stateFollowingExitRoutine( boolean ledState[LED_COUNT],
+                                boolean flags[FLAG_COUNT])
 {
   ledState[LED_RUNNING] = LOW;
   stopMotor(ACTUATOR_MOTOR_RIGHT, ACTUATOR_MOTOR_RIGHT_DIRECTION_PIN, ACTUATOR_MOTOR_RIGHT_SPEED_PIN);

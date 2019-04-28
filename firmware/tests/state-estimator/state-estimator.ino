@@ -1,6 +1,6 @@
 #include "state-estimator.h"
 #include "logger.h"
-#import "BasicLinearAlgebra.h"
+#include "BasicLinearAlgebra.h"
 
 
 StateEstimator estimator;
@@ -28,17 +28,17 @@ void loop() {
     if (b == 's') speed -= 0.05;
     if (b == 'a') angle += 5;
     if (b == 'd') angle -= 5;
-    if (b == ' ') 
+    if (b == ' ')
     {
       speed = 0.f;
       angle = 0.f;
     }
-    if (b == 'l' && !enableLogging) 
+    if (b == 'l' && !enableLogging)
     {
       resetLog();
       enableLogging = true;
     }
-    if (b == 'r') 
+    if (b == 'r')
     {
       enableLogging = false;
 
@@ -64,7 +64,9 @@ void loop() {
   {
     Serial.print(p(0));
     Serial.print(",");
-    Serial.println(p(1));
+    Serial.print(p(1));
+    Serial.print(",");
+    Serial.println(millis() / 5000);
   }
 
 
@@ -76,6 +78,7 @@ void loop() {
     t = millis();
     space = writeLog((int8_t)(p(0) * 100));
     space = writeLog((int8_t)(p(1) * 100));
+    space = writeLog((int8_t)(millis() / 5000));
   }
   else if (!space)
   {

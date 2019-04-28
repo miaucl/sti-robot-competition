@@ -8,7 +8,8 @@
 /**
  * Enter the state wander
  */
-void stateWanderEnterRoutine(boolean ledState[LED_COUNT]);
+void stateWanderEnterRoutine( boolean ledState[LED_COUNT],
+                              boolean flags[FLAG_COUNT]);
 
 /**
  * Run the state wander
@@ -19,15 +20,17 @@ void stateWanderRoutine(int proximityMeasurements[SENSOR_PROXIMITY_COUNT][SENSOR
                         int tofMeasurements[SENSOR_TOF_COUNT][SENSOR_TOF_MEASUREMENT_COUNT],
                         float imuMeasurements[SENSOR_IMU_MEASUREMENT_DIMENSIONS][SENSOR_IMU_MEASUREMENT_COUNT],
                         double motorSpeeds[ACTUATOR_MOTOR_COUNT],
-                        double motorPositionMeasurements[ACTUATOR_MOTOR_COUNT],
+                        double motorSpeedMeasurements[ACTUATOR_MOTOR_COUNT],
                         boolean btnState[BTN_COUNT],
-                        boolean ledState[LED_COUNT]);
+                        boolean ledState[LED_COUNT],
+                        boolean flags[FLAG_COUNT]);
 
 /**
  * Exit the state wander
  */
 void stateWanderExitRoutine(double motorSpeeds[ACTUATOR_MOTOR_COUNT],
-                            boolean ledState[LED_COUNT]);
+                            boolean ledState[LED_COUNT],
+                            boolean flags[FLAG_COUNT]);
 
 
 #endif

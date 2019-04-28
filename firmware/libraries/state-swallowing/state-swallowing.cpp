@@ -26,7 +26,8 @@ static int proxDetectRight = 0;
 static int bottleInRobot = 0;
 
 
-void stateSwallowingEnterRoutine(boolean ledState[LED_COUNT])
+void stateSwallowingEnterRoutine( boolean ledState[LED_COUNT],
+                                  boolean flags[FLAG_COUNT])
 {
   ledState[LED_RUNNING] = HIGH;
 
@@ -41,10 +42,11 @@ void stateSwallowingRoutine(int proximityMeasurements[SENSOR_PROXIMITY_COUNT][SE
                           int tofMeasurements[SENSOR_TOF_COUNT][SENSOR_TOF_MEASUREMENT_COUNT],
                           float imuMeasurements[SENSOR_IMU_MEASUREMENT_DIMENSIONS][SENSOR_IMU_MEASUREMENT_COUNT],
                           double motorSpeeds[ACTUATOR_MOTOR_COUNT],
-                          double motorPositionMeasurements[ACTUATOR_MOTOR_COUNT],
+                          double motorSpeedMeasurements[ACTUATOR_MOTOR_COUNT],
                           int servoAngles[ACTUATOR_SERVO_COUNT],
                           boolean btnState[BTN_COUNT],
-                          boolean ledState[LED_COUNT])
+                          boolean ledState[LED_COUNT],
+                          boolean flags[FLAG_COUNT])
 {
   Serial.print("Swallowing bottle(");
   Serial.print(is_state);
@@ -139,10 +141,10 @@ void stateSwallowingRoutine(int proximityMeasurements[SENSOR_PROXIMITY_COUNT][SE
   else if (is_state == is_stopping)
   {
     Serial.print("motor: ");
-    Serial.print(motorPositionMeasurements[ACTUATOR_MOTOR_LEFT]);
+    Serial.print(motorSpeedMeasurements[ACTUATOR_MOTOR_LEFT]);
     Serial.print("\t");
-    if (fabsf(motorPositionMeasurements[ACTUATOR_MOTOR_LEFT]) < SWALLOWING_STOPPING_THRESHOLD &&
-        fabsf(motorPositionMeasurements[ACTUATOR_MOTOR_RIGHT]) < SWALLOWING_STOPPING_THRESHOLD)
+    if (fabsf(motorSpeedMeasurements[ACTUATOR_MOTOR_LEFT]) < SWALLOWING_STOPPING_THRESHOLD &&
+        fabsf(motorSpeedMeasurements[ACTUATOR_MOTOR_RIGHT]) < SWALLOWING_STOPPING_THRESHOLD)
     {
       servoAngles[ACTUATOR_SERVO_BAR_RIGHT] = ACTUATOR_SERVO_BAR_RIGHT_CLOSED;
       servoAngles[ACTUATOR_SERVO_BAR_LEFT] = ACTUATOR_SERVO_BAR_LEFT_CLOSED;
@@ -169,7 +171,8 @@ void stateSwallowingRoutine(int proximityMeasurements[SENSOR_PROXIMITY_COUNT][SE
 }
 
 
-void stateSwallowingExitRoutine(boolean ledState[LED_COUNT])
+void stateSwallowingExitRoutine(boolean ledState[LED_COUNT],
+                                boolean flags[FLAG_COUNT])
 {
   ledState[LED_RUNNING] = LOW;
   stopMotor(ACTUATOR_MOTOR_RIGHT, ACTUATOR_MOTOR_RIGHT_DIRECTION_PIN, ACTUATOR_MOTOR_RIGHT_SPEED_PIN);

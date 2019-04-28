@@ -13,6 +13,7 @@
  */
 State checkStateTransition( State currentState,
                             long stateChangeTimestamp,
-                            boolean btnState[BTN_COUNT]);
+                            boolean btnState[BTN_COUNT],
+                            boolean flags[FLAG_COUNT]);
 
 #endif

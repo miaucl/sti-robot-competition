@@ -71,9 +71,15 @@
 #define BTN_START 1
 #define BTN_PAUSE 2
 
-#define LED_COUNT 2
+#define LED_COUNT 8
 #define LED_SYSTEM 0
 #define LED_RUNNING 1
+#define LED_2 2
+#define LED_3 3
+#define LED_4 4
+#define LED_5 5
+#define LED_6 6
+#define LED_7 7
 
 #define ACTUATOR_MOTOR_COUNT 2
 #define ACTUATOR_MOTOR_RIGHT 0
@@ -99,6 +105,9 @@
 #define ACTUATOR_SERVO_BAR_RIGHT_CLOSED 10
 #define ACTUATOR_SERVO_BAR_LEFT_OPEN 110
 #define ACTUATOR_SERVO_BAR_LEFT_CLOSED 170
+
+#define FLAG_COUNT 1
+#define FLAG_ENABLE_ESTIMATOR 0
 
 
 /* PINs */
@@ -132,6 +141,12 @@
 
 #define LED_SYSTEM_PIN 30
 #define LED_RUNNING_PIN 31
+#define LED_2_PIN 32
+#define LED_3_PIN 33
+#define LED_4_PIN 34
+#define LED_5_PIN 35
+#define LED_6_PIN 36
+#define LED_7_PIN 37
 
 #define ACTUATOR_MOTOR_RIGHT_DIRECTION_PIN 4
 #define ACTUATOR_MOTOR_RIGHT_SPEED_PIN 5
@@ -144,6 +159,13 @@
 #define ACTUATOR_SERVO_BAR_LEFT_PIN 12
 
 
+/**
+ * Estimator
+ */
+#define ESTIMATOR_CALIBRATION_MAX 200
+#define ESTIMATOR_CALIBRATION_MAX 0 // Uncomment to bypass estimator calibration
+#define ESTIMATOR_CALIBRATION_COUNTER 8
+
 
 /**
  * The possible states of the robot can have
@@ -154,10 +176,10 @@ enum State
   s_calibration,          //1 Calibrate all sensors and actuators
   s_idle,                 //2 Idle state, waiting for start
   s_test,                 //3 Testing state to test all features manually
-  s_following,            //4 Use to make some following on the behaviour
-  s_wander,               //5 Wander around, evade obstacles with TOF and detect bottles with IR
-  s_swallowing,           //6 Turning to have bottle in front and swallowing bottle
-  s_scanning,             //7 Look for bottles (obstacles) in close range
+  s_wander,               //4 Wander around, evade obstacles with TOF and detect bottles with IR
+  s_scanning,             //5 Look for bottles (obstacles) in close range
+  s_following,            //6 Use to make some following on the behaviour
+  s_swallowing,           //7 Turning to have bottle in front and swallowing bottle
 
   s_turn,
   s_wait,
@@ -166,7 +188,7 @@ enum State
 
 // s_wander
 #define WANDER_SPEED 0.6f
-#define WANDER_TURNING_SPEED 0.4f
+#define WANDER_TURNING_SPEED 0.3f
 #define WANDER_TURN_DURATION 2000
 #define WANDER_STOPPING_THRESHOLD 0.001
 #define WANDER_TOF_THRESHOLD 32

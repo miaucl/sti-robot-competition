@@ -25,8 +25,8 @@ void StateEstimator::step(float speed, float angle, float dt)
   float y = this->_x(1);
   float phi = this->_x(2);
 
-  this->_x(0) = x + (cos(phi) + cos(angle)) / 2. * speed * dt; // Approximation
-  this->_x(1) = y + (sin(phi) + sin(angle)) / 2. * speed * dt; // Approximation
+  this->_x(0) = x + (cos(phi / 180 * M_PI) + cos(angle / 180 * M_PI)) / 2. * speed * dt; // Approximation
+  this->_x(1) = y + (sin(phi / 180 * M_PI) + sin(angle / 180 * M_PI)) / 2. * speed * dt; // Approximation
   this->_x(2) = angle;
 }
 

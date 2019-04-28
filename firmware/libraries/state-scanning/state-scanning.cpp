@@ -52,7 +52,8 @@ int targetAngle = 0;
 int checkingCounter = 0;
 
 
-void stateScanningEnterRoutine(boolean ledState[LED_COUNT])
+void stateScanningEnterRoutine( boolean ledState[LED_COUNT],
+                                boolean flags[FLAG_COUNT])
 {
   ledState[LED_RUNNING] = HIGH;
 
@@ -67,9 +68,10 @@ void stateScanningRoutine(int proximityMeasurements[SENSOR_PROXIMITY_COUNT][SENS
                           int tofMeasurements[SENSOR_TOF_COUNT][SENSOR_TOF_MEASUREMENT_COUNT],
                           float imuMeasurements[SENSOR_IMU_MEASUREMENT_DIMENSIONS][SENSOR_IMU_MEASUREMENT_COUNT],
                           double motorSpeeds[ACTUATOR_MOTOR_COUNT],
-                          double motorPositionMeasurements[ACTUATOR_MOTOR_COUNT],
+                          double motorSpeedMeasurements[ACTUATOR_MOTOR_COUNT],
                           boolean btnState[BTN_COUNT],
-                          boolean ledState[LED_COUNT])
+                          boolean ledState[LED_COUNT],
+                          boolean flags[FLAG_COUNT])
 {
   Serial.print("Scanning bottle(");
   Serial.print(is_state);
@@ -251,8 +253,8 @@ void stateScanningRoutine(int proximityMeasurements[SENSOR_PROXIMITY_COUNT][SENS
   else if (is_state == is_turn_stopping)
   {
 
-    if (fabsf(motorPositionMeasurements[ACTUATOR_MOTOR_LEFT]) < SCANNING_STOPPING_THRESHOLD &&
-        fabsf(motorPositionMeasurements[ACTUATOR_MOTOR_RIGHT]) < SCANNING_STOPPING_THRESHOLD)
+    if (fabsf(motorSpeedMeasurements[ACTUATOR_MOTOR_LEFT]) < SCANNING_STOPPING_THRESHOLD &&
+        fabsf(motorSpeedMeasurements[ACTUATOR_MOTOR_RIGHT]) < SCANNING_STOPPING_THRESHOLD)
     {
       is_state = is_orienting;
     }
@@ -308,7 +310,8 @@ void stateScanningRoutine(int proximityMeasurements[SENSOR_PROXIMITY_COUNT][SENS
 }
 
 
-void stateScanningExitRoutine(boolean ledState[LED_COUNT])
+void stateScanningExitRoutine(boolean ledState[LED_COUNT],
+                              boolean flags[FLAG_COUNT])
 {
   ledState[LED_RUNNING] = LOW;
   stopMotor(ACTUATOR_MOTOR_RIGHT, ACTUATOR_MOTOR_RIGHT_DIRECTION_PIN, ACTUATOR_MOTOR_RIGHT_SPEED_PIN);

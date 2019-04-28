@@ -8,7 +8,8 @@
 /**
  * Enter the state following
  */
-void stateFollowingEnterRoutine(boolean ledState[LED_COUNT]);
+void stateFollowingEnterRoutine(boolean ledState[LED_COUNT],
+                                boolean flags[FLAG_COUNT]);
 
 /**
  * Run the state following
@@ -19,14 +20,16 @@ void stateFollowingRoutine(int proximityMeasurements[SENSOR_PROXIMITY_COUNT][SEN
                           int tofMeasurements[SENSOR_TOF_COUNT][SENSOR_TOF_MEASUREMENT_COUNT],
                           float imuMeasurements[SENSOR_IMU_MEASUREMENT_DIMENSIONS][SENSOR_IMU_MEASUREMENT_COUNT],
                           double motorSpeeds[ACTUATOR_MOTOR_COUNT],
-                          double motorPositionMeasurements[ACTUATOR_MOTOR_COUNT],
+                          double motorSpeedMeasurements[ACTUATOR_MOTOR_COUNT],
                           boolean btnState[BTN_COUNT],
-                          boolean ledState[LED_COUNT]);
+                          boolean ledState[LED_COUNT],
+                          boolean flags[FLAG_COUNT]);
 
 /**
  * Exit the state following
  */
-void stateFollowingExitRoutine(boolean ledState[LED_COUNT]);
+void stateFollowingExitRoutine( boolean ledState[LED_COUNT],
+                                boolean flags[FLAG_COUNT]);
 
 
 #endif

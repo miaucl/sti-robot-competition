@@ -7,6 +7,7 @@
 #include "sensors.h"
 #include "leds.h"
 #include "actuators.h"
+#include "state-estimator.h"
 #include "state-machine.h"
 #include "state-following.h"
 #include "state-wander.h"
@@ -47,10 +48,19 @@ boolean ledState[LED_COUNT] = {0};
 
 // The control values for the motor actuators and the measurement of the position for each step
 double motorSpeeds[ACTUATOR_MOTOR_COUNT] = {0};
-double motorPositionMeasurements[ACTUATOR_MOTOR_COUNT] = {0};
+double motorSpeedMeasurements[ACTUATOR_MOTOR_COUNT] = {0};
 
 // The angle for the servo actuators
 int servoAngles[ACTUATOR_SERVO_COUNT] = {0};
+
+// The flags
+boolean flags[FLAG_COUNT] = {0};
+
+
+// State estimator for position and angle
+StateEstimator estimator;
+float estimatorAngleOffset = 0;
+
 
 
 /*********
@@ -124,6 +134,9 @@ void configuration()
   servoAngles[ACTUATOR_SERVO_BAR_LEFT] = ACTUATOR_SERVO_BAR_LEFT_CLOSED;
   resetServoAngle(servoAngles, ACTUATOR_SERVO_BAR_RIGHT, ACTUATOR_SERVO_BAR_RIGHT_PIN);
   resetServoAngle(servoAngles, ACTUATOR_SERVO_BAR_LEFT, ACTUATOR_SERVO_BAR_LEFT_PIN);
+
+  Matrix<3> x0 = {0.5,0.5,0};
+  estimator.init(x0);
 }
 
 
@@ -159,7 +172,9 @@ void loop()
 
   // Wait for period
   static long lastPeriodStart = millis();
+  static long dt = 0;
   while (millis() - lastPeriodStart < PERIOD) { }
+  dt = millis() - lastPeriodStart;
   lastPeriodStart = millis();
 
 
@@ -167,7 +182,7 @@ void loop()
 
 
   // Check for state transition
-  State nextState = checkStateTransition(state, stateChangeTimestamp, btnState);
+  State nextState = checkStateTransition(state, stateChangeTimestamp, btnState, flags);
   if (state != nextState)
   {
     #ifdef SERIAL_ENABLE
@@ -225,6 +240,9 @@ void loop()
     case s_scanning: stateScanning(); break;
   }
 
+  // Update Estimator
+  updateEstimator(dt);
+
   // Feedback
   writeLeds(ledState);
 
@@ -263,28 +281,84 @@ void stateInitializationExit()
 // The "s_calibration" state
 void stateCalibrationEnter()
 {
-  ledState[LED_SYSTEM] = HIGH;
+  ledState[LED_SYSTEM] = HIGH; writeLeds(ledState);
 
   #ifdef SERIAL_ENABLE
   Serial.println("Calibrate Sensors");
   #endif
 
   delay(200);
+  ledState[LED_SYSTEM] = !ledState[LED_SYSTEM]; writeLeds(ledState);
 
   calibrateProximity(proximityAmbientMeasurements, proximityAmbientVarianceMeasurements, SENSOR_PROXIMITY_RIGHT, SENSOR_PROXIMITY_RIGHT_PIN);
+  ledState[LED_SYSTEM] = !ledState[LED_SYSTEM]; writeLeds(ledState);
   calibrateProximity(proximityAmbientMeasurements, proximityAmbientVarianceMeasurements, SENSOR_PROXIMITY_FORWARD_RIGHT, SENSOR_PROXIMITY_FORWARD_RIGHT_PIN);
+  ledState[LED_SYSTEM] = !ledState[LED_SYSTEM]; writeLeds(ledState);
   calibrateProximity(proximityAmbientMeasurements, proximityAmbientVarianceMeasurements, SENSOR_PROXIMITY_FORWARD, SENSOR_PROXIMITY_FORWARD_PIN);
+  ledState[LED_SYSTEM] = !ledState[LED_SYSTEM]; writeLeds(ledState);
   calibrateProximity(proximityAmbientMeasurements, proximityAmbientVarianceMeasurements, SENSOR_PROXIMITY_FORWARD_LEFT, SENSOR_PROXIMITY_FORWARD_LEFT_PIN);
+  ledState[LED_SYSTEM] = !ledState[LED_SYSTEM]; writeLeds(ledState);
   calibrateProximity(proximityAmbientMeasurements, proximityAmbientVarianceMeasurements, SENSOR_PROXIMITY_LEFT, SENSOR_PROXIMITY_LEFT_PIN);
+  ledState[LED_SYSTEM] = !ledState[LED_SYSTEM]; writeLeds(ledState);
   calibrateProximity(proximityAmbientMeasurements, proximityAmbientVarianceMeasurements, SENSOR_PROXIMITY_BACKWARD, SENSOR_PROXIMITY_BACKWARD_PIN);
+  ledState[LED_SYSTEM] = !ledState[LED_SYSTEM]; writeLeds(ledState);
   calibrateProximity(proximityAmbientMeasurements, proximityAmbientVarianceMeasurements, SENSOR_PROXIMITY_DOWN_RIGHT, SENSOR_PROXIMITY_DOWN_RIGHT_PIN);
+  ledState[LED_SYSTEM] = !ledState[LED_SYSTEM]; writeLeds(ledState);
   calibrateProximity(proximityAmbientMeasurements, proximityAmbientVarianceMeasurements, SENSOR_PROXIMITY_DOWN_LEFT, SENSOR_PROXIMITY_DOWN_LEFT_PIN);
+  ledState[LED_SYSTEM] = !ledState[LED_SYSTEM]; writeLeds(ledState);
   calibrateProximity(proximityAmbientMeasurements, proximityAmbientVarianceMeasurements, SENSOR_PROXIMITY_DETECT_RIGHT, SENSOR_PROXIMITY_DETECT_RIGHT_PIN);
+  ledState[LED_SYSTEM] = !ledState[LED_SYSTEM]; writeLeds(ledState);
   calibrateProximity(proximityAmbientMeasurements, proximityAmbientVarianceMeasurements, SENSOR_PROXIMITY_DETECT_LEFT, SENSOR_PROXIMITY_DETECT_LEFT_PIN);
+  ledState[LED_SYSTEM] = !ledState[LED_SYSTEM]; writeLeds(ledState);
   calibrateTOF(SENSOR_TOF_RIGHT, SENSOR_TOF_RIGHT_TRIGGER_PIN, SENSOR_TOF_RIGHT_ECHO_PIN);
+  ledState[LED_SYSTEM] = !ledState[LED_SYSTEM]; writeLeds(ledState);
   calibrateTOF(SENSOR_TOF_CENTER, SENSOR_TOF_CENTER_TRIGGER_PIN, SENSOR_TOF_CENTER_ECHO_PIN);
+  ledState[LED_SYSTEM] = !ledState[LED_SYSTEM]; writeLeds(ledState);
   calibrateTOF(SENSOR_TOF_LEFT, SENSOR_TOF_LEFT_TRIGGER_PIN, SENSOR_TOF_LEFT_ECHO_PIN);
+  ledState[LED_SYSTEM] = !ledState[LED_SYSTEM]; writeLeds(ledState);
   calibrateIMU();
+  ledState[LED_SYSTEM] = !ledState[LED_SYSTEM]; writeLeds(ledState);
+
+  #ifdef SERIAL_ENABLE
+  Serial.println("Calibrate Estimator …");
+  #endif
+  readIMU(imuMeasurements, &imuMeasurementIndex);
+  float calibrateAngle = 0.f;
+  int calibrateCounter = 0;
+  ledState[LED_SYSTEM] = !ledState[LED_SYSTEM]; writeLeds(ledState);
+  for (int i = 0; i<ESTIMATOR_CALIBRATION_MAX; i++) // Wait for IMU to get stabelized
+  {
+    delay(200); 
+    ledState[LED_SYSTEM] = !ledState[LED_SYSTEM]; writeLeds(ledState);
+    readIMU(imuMeasurements, &imuMeasurementIndex);
+    float newCalibrateAngle = imuMeasurements[SENSOR_IMU_YAW][imuMeasurementIndex];
+    if (fabsf(newCalibrateAngle) < 1) continue;
+
+    #ifdef SERIAL_ENABLE
+    Serial.print("-");
+    #endif
+    if (fabsf(newCalibrateAngle - calibrateAngle) > 0.001)
+    {
+      calibrateAngle = newCalibrateAngle;
+    }
+    else
+    {
+      calibrateCounter++;
+    }
+
+    if (calibrateCounter > ESTIMATOR_CALIBRATION_COUNTER)
+    {
+      break;
+    }
+  }
+  ledState[LED_SYSTEM] = !ledState[LED_SYSTEM]; writeLeds(ledState);
+  #ifdef SERIAL_ENABLE
+  Serial.println(" Done!");
+  #endif
+  delay(200);
+  setEstimatorAngleOffset();
+  
+  ledState[LED_SYSTEM] = HIGH; writeLeds(ledState);
 }
 
 void stateCalibration()
@@ -305,15 +379,25 @@ void stateCalibrationExit()
 // The "s_idle" state
 void stateIdleEnter()
 {
+  flags[FLAG_ENABLE_ESTIMATOR] = false;
+  ledState[LED_SYSTEM] = false;
 }
 
 void stateIdle()
 {
   readBtns(btnState);
+
+  static long t = millis();
+  if (millis() - t > 500)
+  {
+    ledState[LED_SYSTEM] = !ledState[LED_SYSTEM];
+    t = millis();
+  }
 }
 
 void stateIdleExit()
 {
+  ledState[LED_SYSTEM] = false;
 }
 
 // ================================================================
@@ -325,6 +409,8 @@ void stateIdleExit()
 void stateTestEnter()
 {
   ledState[LED_RUNNING] = HIGH;
+  flags[FLAG_ENABLE_ESTIMATOR] = true;
+  setEstimatorAngleOffset();
 }
 
 void stateTest()
@@ -398,23 +484,27 @@ void stateTest()
 
   updateAll();
 
+  int p  =getAverageProximityValue(proximityMeasurements, SENSOR_PROXIMITY_FORWARD);
+  int t = getFilteredAverageTOFValue(tofMeasurements, SENSOR_TOF_CENTER);
+  if (p > 300 && (t == 0 || t > 32))
+  {
+    Serial.println("Bottle");
+  }
+  else if (p > 200 && (t > 0 && t < 32))
+  {
+    Serial.println("Wall");
+  }
+  else
+  {
+    Serial.println("–");
+  }
+
 //  Serial.print("Z: ");
 //  Serial.print(getMedianIMUZOrientationValue(imuMeasurements));
 //  Serial.print("\tIR: ");
 //  Serial.print(getAverageProximityValue(proximityMeasurements, SENSOR_PROXIMITY_FORWARD));
 //  Serial.print("\tTOF: ");
 //  Serial.println(getFilteredAverageTOFValue(tofMeasurements, SENSOR_TOF_CENTER));
-//
-//  static double m[2] = {0};
-//
-//  m[0] += (motorPositionMeasurements[0] + motorPositionMeasurements[1]) / 2; // Directional speed
-//  m[1] += abs(motorPositionMeasurements[0] - motorPositionMeasurements[1]) * 2; // Rotational speed
-//
-//  Serial.print(millis());
-//  Serial.print(",");
-//  Serial.print(m[0]);
-//  Serial.print(",");
-//  Serial.println(m[1]);
 }
 
 void stateTestExit()
@@ -422,6 +512,7 @@ void stateTestExit()
   ledState[LED_RUNNING] = LOW;
   stopMotor(ACTUATOR_MOTOR_RIGHT, ACTUATOR_MOTOR_RIGHT_DIRECTION_PIN, ACTUATOR_MOTOR_RIGHT_SPEED_PIN);
   stopMotor(ACTUATOR_MOTOR_LEFT, ACTUATOR_MOTOR_LEFT_DIRECTION_PIN, ACTUATOR_MOTOR_LEFT_SPEED_PIN);
+  flags[FLAG_ENABLE_ESTIMATOR] = true;
 }
 
 
@@ -433,21 +524,30 @@ void stateTestExit()
 // The "s_wander" state
 void stateWanderEnter()
 {
-  stateWanderEnterRoutine(ledState);
+  stateWanderEnterRoutine(ledState, flags);
 }
 
 void stateWander()
 {
   readAll();
 
-  stateWanderRoutine(proximityMeasurements, proximityAmbientMeasurements, proximityAmbientVarianceMeasurements, tofMeasurements, imuMeasurements, motorSpeeds, motorPositionMeasurements, btnState, ledState);
+  stateWanderRoutine( proximityMeasurements, 
+                      proximityAmbientMeasurements, 
+                      proximityAmbientVarianceMeasurements, 
+                      tofMeasurements, 
+                      imuMeasurements, 
+                      motorSpeeds, 
+                      motorSpeedMeasurements, 
+                      btnState, 
+                      ledState, 
+                      flags);
 
   updateAll();
 }
 
 void stateWanderExit()
 {
-  stateWanderExitRoutine(motorSpeeds, ledState);
+  stateWanderExitRoutine(motorSpeeds, ledState, flags);
 }
 
 // ================================================================
@@ -458,21 +558,30 @@ void stateWanderExit()
 // The "s_following" state
 void stateFollowingEnter()
 {
-  stateFollowingEnterRoutine(ledState);
+  stateFollowingEnterRoutine(ledState, flags);
 }
 
 void stateFollowing()
 {
   readAll();
 
-  stateFollowingRoutine(proximityMeasurements, proximityAmbientMeasurements, proximityAmbientVarianceMeasurements, tofMeasurements, imuMeasurements, motorSpeeds, motorPositionMeasurements, btnState, ledState);
+  stateFollowingRoutine(proximityMeasurements, 
+                        proximityAmbientMeasurements, 
+                        proximityAmbientVarianceMeasurements, 
+                        tofMeasurements, 
+                        imuMeasurements, 
+                        motorSpeeds, 
+                        motorSpeedMeasurements, 
+                        btnState, 
+                        ledState, 
+                        flags);
 
   updateAll();
 }
 
 void stateFollowingExit()
 {
-  stateFollowingExitRoutine(ledState);
+  stateFollowingExitRoutine(ledState, flags);
 }
 
 
@@ -485,21 +594,31 @@ void stateFollowingExit()
 // The "s_swallowing" state
 void stateSwallowingEnter()
 {
-  stateSwallowingEnterRoutine(ledState);
+  stateSwallowingEnterRoutine(ledState, flags);
 }
 
 void stateSwallowing()
 {
   readAll();
 
-  stateSwallowingRoutine(proximityMeasurements, proximityAmbientMeasurements, proximityAmbientVarianceMeasurements, tofMeasurements, imuMeasurements, motorSpeeds, motorPositionMeasurements, servoAngles, btnState, ledState);
+  stateSwallowingRoutine( proximityMeasurements, 
+                          proximityAmbientMeasurements, 
+                          proximityAmbientVarianceMeasurements, 
+                          tofMeasurements, 
+                          imuMeasurements, 
+                          motorSpeeds, 
+                          motorSpeedMeasurements, 
+                          servoAngles, 
+                          btnState, 
+                          ledState, 
+                          flags);
 
   updateAll();
 }
 
 void stateSwallowingExit()
 {
-  stateSwallowingExitRoutine(ledState);
+  stateSwallowingExitRoutine(ledState, flags);
 }
 
 
@@ -511,21 +630,30 @@ void stateSwallowingExit()
 // The "s_scanning" state
 void stateScanningEnter()
 {
-  stateScanningEnterRoutine(ledState);
+  stateScanningEnterRoutine(ledState, flags);
 }
 
 void stateScanning()
 {
   readAll();
 
-  stateScanningRoutine(proximityMeasurements, proximityAmbientMeasurements, proximityAmbientVarianceMeasurements, tofMeasurements, imuMeasurements, motorSpeeds, motorPositionMeasurements, btnState, ledState);
+  stateScanningRoutine( proximityMeasurements, 
+                        proximityAmbientMeasurements, 
+                        proximityAmbientVarianceMeasurements, 
+                        tofMeasurements, 
+                        imuMeasurements, 
+                        motorSpeeds, 
+                        motorSpeedMeasurements, 
+                        btnState, 
+                        ledState, 
+                        flags);
 
   updateAll();
 }
 
 void stateScanningExit()
 {
-  stateScanningExitRoutine(ledState);
+  stateScanningExitRoutine(ledState, flags);
 }
 
 
@@ -566,11 +694,46 @@ void readAll()
  */
 void updateAll()
 {
-  updateMotorSpeedControl(ACTUATOR_MOTOR_RIGHT, ACTUATOR_MOTOR_RIGHT_DIRECTION_PIN, ACTUATOR_MOTOR_RIGHT_SPEED_PIN, motorPositionMeasurements);
-  updateMotorSpeedControl(ACTUATOR_MOTOR_LEFT, ACTUATOR_MOTOR_LEFT_DIRECTION_PIN, ACTUATOR_MOTOR_LEFT_SPEED_PIN, motorPositionMeasurements);
+  updateMotorSpeedControl(ACTUATOR_MOTOR_RIGHT, ACTUATOR_MOTOR_RIGHT_DIRECTION_PIN, ACTUATOR_MOTOR_RIGHT_SPEED_PIN, motorSpeedMeasurements);
+  updateMotorSpeedControl(ACTUATOR_MOTOR_LEFT, ACTUATOR_MOTOR_LEFT_DIRECTION_PIN, ACTUATOR_MOTOR_LEFT_SPEED_PIN, motorSpeedMeasurements);
   updateServoAngleControl(ACTUATOR_SERVO_BAR_RIGHT, ACTUATOR_SERVO_BAR_RIGHT_PIN);
   updateServoAngleControl(ACTUATOR_SERVO_BAR_LEFT, ACTUATOR_SERVO_BAR_LEFT_PIN);
 }
+
+/**
+ * Set angle estimator offset
+ */
+void setEstimatorAngleOffset()
+{
+  estimatorAngleOffset = imuMeasurements[SENSOR_IMU_YAW][imuMeasurementIndex];
+  #ifdef SERIAL_ENABLE
+  Serial.print("Set Estimator Offset: ");
+  Serial.println(estimatorAngleOffset);
+  #endif
+}
+
+/**
+ * Upate estimator
+ */
+void updateEstimator(long dt)
+{
+  if (flags[FLAG_ENABLE_ESTIMATOR])
+  {
+    float angle = imuMeasurements[SENSOR_IMU_YAW][imuMeasurementIndex] - estimatorAngleOffset;
+    float speed = (motorSpeedMeasurements[ACTUATOR_MOTOR_RIGHT] + motorSpeedMeasurements[ACTUATOR_MOTOR_LEFT]) / 2.f;
+
+    estimator.step(speed, -angle, dt / 1000.f);
+
+    Matrix<2> p = estimator.getPosition();
+
+//    Serial.print(p(0));
+//    Serial.print(", ");
+//    Serial.print(p(1));
+//    Serial.print(", ");
+//    Serial.println(state);
+  }
+}
+
 
 /**
  * Logging
