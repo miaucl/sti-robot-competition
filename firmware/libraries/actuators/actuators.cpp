@@ -121,7 +121,7 @@ void stopMotor( int id,
 void updateMotorSpeedControl( int id,
                               int directionPin,
                               int speedPin,
-                              double motorPositionMeasurements[ACTUATOR_MOTOR_COUNT])
+                              double motorSpeedMeasurements[ACTUATOR_MOTOR_COUNT])
 {
   long motorUpdateTimestamp = micros();
 
@@ -141,8 +141,8 @@ void updateMotorSpeedControl( int id,
     // Go Backwards
     if (controlMotorSpeeds[id] < 0) meterPerSecond *= -1;
 
-    // Export measurement of position
-    motorPositionMeasurements[id] = meterPerSecond * (motorUpdateTimestamp - lastMotorUpdateTimestamp[id]) / 1000000;
+    // Export measurement of speed
+    motorSpeedMeasurements[id] = meterPerSecond;
 
     measuredMotorSpeeds[id] = meterPerSecond;
   }

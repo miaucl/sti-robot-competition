@@ -8,7 +8,8 @@
 /**
  * Enter the state scanning
  */
-void stateScanningEnterRoutine(boolean ledState[LED_COUNT]);
+void stateScanningEnterRoutine( boolean ledState[LED_COUNT],
+                                boolean flags[FLAG_COUNT]);
 
 /**
  * Run the state scanning
@@ -19,14 +20,16 @@ void stateScanningRoutine(int proximityMeasurements[SENSOR_PROXIMITY_COUNT][SENS
                           int tofMeasurements[SENSOR_TOF_COUNT][SENSOR_TOF_MEASUREMENT_COUNT],
                           float imuMeasurements[SENSOR_IMU_MEASUREMENT_DIMENSIONS][SENSOR_IMU_MEASUREMENT_COUNT],
                           double motorSpeeds[ACTUATOR_MOTOR_COUNT],
-                          double motorPositionMeasurements[ACTUATOR_MOTOR_COUNT],
+                          double motorSpeedMeasurements[ACTUATOR_MOTOR_COUNT],
                           boolean btnState[BTN_COUNT],
-                          boolean ledState[LED_COUNT]);
+                          boolean ledState[LED_COUNT],
+                          boolean flags[FLAG_COUNT]);
 
 /**
  * Exit the state scanning
  */
-void stateScanningExitRoutine(boolean ledState[LED_COUNT]);
+void stateScanningExitRoutine(boolean ledState[LED_COUNT],
+                              boolean flags[FLAG_COUNT]);
 
 
 #endif

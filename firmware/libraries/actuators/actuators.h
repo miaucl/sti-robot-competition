@@ -42,7 +42,7 @@ void stopMotor( int id,
 void updateMotorSpeedControl( int id,
                               int directionPin,
                               int speedPin,
-                              double motorPositionMeasurements[ACTUATOR_MOTOR_COUNT]);
+                              double motorSpeedMeasurements[ACTUATOR_MOTOR_COUNT]);
 
 /**
  * Configure the servo

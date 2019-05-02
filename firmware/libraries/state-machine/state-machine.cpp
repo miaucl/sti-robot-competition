@@ -9,7 +9,8 @@
 
 State checkStateTransition( State currentState,
                             long stateChangeTimestamp,
-                            boolean btnState[BTN_COUNT])
+                            boolean btnState[BTN_COUNT],
+                            boolean flags[FLAG_COUNT])
 {
   /**
    * Current state "s_initialization"
@@ -32,7 +33,7 @@ State checkStateTransition( State currentState,
     // Wait for the START button to be pressed to start the robot
     if (btnState[BTN_START])
     {
-      return s_test;
+      return s_scanning;
     }
 
   }
