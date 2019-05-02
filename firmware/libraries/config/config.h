@@ -106,8 +106,9 @@
 #define ACTUATOR_SERVO_BAR_LEFT_OPEN 110
 #define ACTUATOR_SERVO_BAR_LEFT_CLOSED 170
 
-#define FLAG_COUNT 1
+#define FLAG_COUNT 2
 #define FLAG_ENABLE_ESTIMATOR 0
+#define FLAG_TURN_RIGHT 1
 
 
 /* PINs */
@@ -180,6 +181,7 @@ enum State
   s_scanning,             //5 Look for bottles (obstacles) in close range
   s_following,            //6 Use to make some following on the behaviour
   s_swallowing,           //7 Turning to have bottle in front and swallowing bottle
+  s_turning,              //8 Turns a given angle
 
   s_turn,
   s_wait,
@@ -230,6 +232,11 @@ enum State
 #define SCANNING_CHECKING_TOF_RIGHT_THRESHOLD 18.f
 #define SCANNING_CHECKING_TOF_CENTER_THRESHOLD 24.f
 #define SCANNING_CHECKING_TOF_LEFT_THRESHOLD 18.f
+
+#define TURNING_SPEED 0.2f
+#define TURNING_ANGLE 90
+#define TURNING_STOPPING_THRESHOLD 0.001
+#define TURNING_ANGLE_THRESHOLD 4
 
 
 
