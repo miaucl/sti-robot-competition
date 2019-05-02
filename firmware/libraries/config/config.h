@@ -158,6 +158,7 @@ enum State
   s_wander,               //5 Wander around, evade obstacles with TOF and detect bottles with IR
   s_swallowing,           //6 Turning to have bottle in front and swallowing bottle
   s_scanning,             //7 Look for bottles (obstacles) in close range
+  s_ascending,            //8 Go from recycling zone on platform
 
   s_turn,
   s_wait,
@@ -204,7 +205,18 @@ enum State
 #define SCANNING_ORIENTING_MAX_SPEED 0.5f
 #define SCANNING_CHECKING_MEASUREMENTS 32
 #define SCANNING_CHECKING_TOF_THRESHOLD 24.f
-
+// s_ascending
+#define ASCENDING_TURNING_SPEED 0.2f
+#define ASCENDING_TURNING_THRESHOLD 40
+#define ASCENDING_CORNER_DETECTED_THRESHOLD 300
+#define ASCENDING_SLOPE_DETECTED_THRESHOLD 300
+#define ASCENDING_WALL_FOLLOWING_SPEED 0.4f
+#define ASCENDING_STOPPING_THRESHOLD 0.001
+#define ASCENDING_WALL_REACTIVITY 0.0025
+#define ASCENDING_SLOPE_TRANISTION_DURATION 1500
+#define ASCENDING_SLOPE_REACTIVITY 0.0025
+#define ASCENDING_SLOPE_PROX_THRESHOLD 100
+#define ASCENDING_DESIRED_WALL_DISTANCE 160
 
 
 #endif

@@ -12,6 +12,7 @@
 #include "state-wander.h"
 #include "state-swallowing.h"
 #include "state-scanning.h"
+#include "state-ascending.h"
 
 /*********
  * Global values
@@ -190,6 +191,7 @@ void loop()
       case s_following: stateFollowingExit(); break;
       case s_swallowing: stateSwallowingExit(); break;
       case s_scanning: stateScanningExit(); break;
+      case s_ascending: stateAscendingExit(); break;
     }
 
     // Enter next state
@@ -203,6 +205,7 @@ void loop()
       case s_following: stateTestEnter(); break;
       case s_swallowing: stateSwallowingEnter(); break;
       case s_scanning: stateScanningEnter(); break;
+      case s_ascending: stateAscendingEnter(); break;
     }
 
     // Set next state
@@ -223,6 +226,7 @@ void loop()
     case s_following: stateFollowing(); break;
     case s_swallowing: stateSwallowing(); break;
     case s_scanning: stateScanning(); break;
+    case s_ascending: stateAscending(); break;
   }
 
   // Feedback
@@ -528,7 +532,31 @@ void stateScanningExit()
   stateScanningExitRoutine(ledState);
 }
 
+// ================================================================
+// ===                       ASCENDING STATE                    ===
+// ================================================================
 
+
+// The "s_ascending" state
+void stateAscendingEnter()
+{
+  stateAscendingEnterRoutine(ledState);
+}
+
+void stateAscending()
+{
+  readAll();
+
+  stateAscendingRoutine(proximityMeasurements, proximityAmbientMeasurements, proximityAmbientVarianceMeasurements, tofMeasurements, imuMeasurements, motorSpeeds, motorPositionMeasurements, servoAngles, btnState, ledState);
+
+
+  updateAll();
+}
+
+void stateAscendingExit()
+{
+  stateAscendingExitRoutine(ledState);
+}
 
 
 
