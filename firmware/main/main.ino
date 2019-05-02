@@ -484,13 +484,15 @@ void stateTest()
 
   updateAll();
 
-  int p  =getAverageProximityValue(proximityMeasurements, SENSOR_PROXIMITY_FORWARD);
-  int t = getFilteredAverageTOFValue(tofMeasurements, SENSOR_TOF_CENTER);
-  if (p > 300 && (t == 0 || t > 32))
+  int p = getAverageProximityValue(proximityMeasurements, SENSOR_PROXIMITY_FORWARD);
+  int tl = getFilteredAverageTOFValue(tofMeasurements, SENSOR_TOF_LEFT);
+  int tc = getFilteredAverageTOFValue(tofMeasurements, SENSOR_TOF_CENTER);
+  int tr = getFilteredAverageTOFValue(tofMeasurements, SENSOR_TOF_RIGHT);
+  if (p > 300 && (tl == 0 || tl > 32) && (tc == 0 || tc > 32) && (tr == 0 || tr > 32))
   {
     Serial.println("Bottle");
   }
-  else if (p > 200 && (t > 0 && t < 32))
+  else if (p > 200 && (tl > 0 && tl < 32 || tc > 0 && tc < 32 || tr > 0 && tr < 32))
   {
     Serial.println("Wall");
   }
@@ -504,7 +506,12 @@ void stateTest()
 //  Serial.print("\tIR: ");
 //  Serial.print(getAverageProximityValue(proximityMeasurements, SENSOR_PROXIMITY_FORWARD));
 //  Serial.print("\tTOF: ");
-//  Serial.println(getFilteredAverageTOFValue(tofMeasurements, SENSOR_TOF_CENTER));
+//  Serial.print(getFilteredAverageTOFValue(tofMeasurements, SENSOR_TOF_LEFT));
+//  Serial.print(", ");
+//  Serial.print(getFilteredAverageTOFValue(tofMeasurements, SENSOR_TOF_CENTER));
+//  Serial.print(", ");
+//  Serial.println(getFilteredAverageTOFValue(tofMeasurements, SENSOR_TOF_RIGHT));
+
 }
 
 void stateTestExit()

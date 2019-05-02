@@ -293,8 +293,12 @@ void stateScanningRoutine(int proximityMeasurements[SENSOR_PROXIMITY_COUNT][SENS
     Serial.print(", ");
     Serial.print(getAverageProximityValue(proximityMeasurements, SENSOR_PROXIMITY_FORWARD) - proximityAmbientMeasurements[SENSOR_PROXIMITY_FORWARD]);
 
-    float tof = getFilteredAverageTOFValue(tofMeasurements, SENSOR_TOF_CENTER);
-    if (tof > 0 && tof < SCANNING_CHECKING_TOF_THRESHOLD)
+    float tofLeft = getFilteredAverageTOFValue(tofMeasurements, SENSOR_TOF_CENTER);
+    float tofCenter = getFilteredAverageTOFValue(tofMeasurements, SENSOR_TOF_CENTER);
+    float tofRight = getFilteredAverageTOFValue(tofMeasurements, SENSOR_TOF_CENTER);
+    if ((tofLeft > 0 && tofLeft < SCANNING_CHECKING_TOF_RIGHT_THRESHOLD) ||
+        (tofCenter > 0 && tofCenter < SCANNING_CHECKING_TOF_CENTER_THRESHOLD) ||
+        (tofRight > 0 && tofRight < SCANNING_CHECKING_TOF_LEFT_THRESHOLD))
     {
       Serial.print("OBASTACLE IN FRONT OF US!");
       is_state = is_off;
