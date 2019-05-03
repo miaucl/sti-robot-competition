@@ -16,6 +16,9 @@
 /* The unique ID of the robot */
 #define ROBOT_ID 1
 
+/* Debugging */
+#define DEBUG_ENABLE 1
+
 /* Serial communication */
 #define SERIAL_ENABLE 1
 #define SERIAL_CONN_ENABLE 1
@@ -164,7 +167,7 @@
  * Estimator
  */
 #define ESTIMATOR_CALIBRATION_MAX 200
-#define ESTIMATOR_CALIBRATION_MAX 0 // Uncomment to bypass estimator calibration
+//#define ESTIMATOR_CALIBRATION_MAX 0 // Uncomment to bypass estimator calibration
 #define ESTIMATOR_CALIBRATION_COUNTER 8
 
 
@@ -218,7 +221,7 @@ enum State
 #define SWALLOWING_SPEED 0.4f
 #define SWALLOWING_OPEN_DURATION 1500
 #define SWALLOWING_DURATION_OFFSET 500
-#define SWALLOWING_DURATION 3000
+#define SWALLOWING_DURATION 4000
 #define SWALLOWING_BOTTLE_DETECTION_THRESHOLD 100
 // s_scanning
 #define SCANNING_TURNING_SPEED 0.2f
@@ -234,9 +237,9 @@ enum State
 #define SCANNING_CHECKING_TOF_LEFT_THRESHOLD 18.f
 
 #define TURNING_SPEED 0.2f
-#define TURNING_ANGLE 90
-#define TURNING_STOPPING_THRESHOLD 0.001
-#define TURNING_ANGLE_THRESHOLD 4
+#define TURNING_ANGLE 90.f
+#define TURNING_STOPPING_THRESHOLD 0.001f
+#define TURNING_ANGLE_THRESHOLD 4.f
 
 
 

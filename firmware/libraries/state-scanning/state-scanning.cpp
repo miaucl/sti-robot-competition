@@ -56,10 +56,6 @@ void stateScanningEnterRoutine( boolean ledState[LED_COUNT],
                                 boolean flags[FLAG_COUNT])
 {
   ledState[LED_RUNNING] = HIGH;
-
-  #ifdef SERIAL_ENABLE
-  Serial.println("Scanning Bottle");
-  #endif
 }
 
 void stateScanningRoutine(int proximityMeasurements[SENSOR_PROXIMITY_COUNT][SENSOR_PROXIMITY_MEASUREMENT_COUNT],
@@ -73,10 +69,13 @@ void stateScanningRoutine(int proximityMeasurements[SENSOR_PROXIMITY_COUNT][SENS
                           boolean ledState[LED_COUNT],
                           boolean flags[FLAG_COUNT])
 {
-  Serial.print("Scanning bottle(");
+  #ifdef SERIAL_ENABLE
+  Serial.print("scanning(");
   Serial.print(is_state);
   Serial.print(")\t");
-  // DEBUG
+  #endif
+
+  #ifdef DEBUG_ENABLE
   if (Serial.available() > 0)
   {
     char b = Serial.read();
@@ -95,10 +94,15 @@ void stateScanningRoutine(int proximityMeasurements[SENSOR_PROXIMITY_COUNT][SENS
       writeRawMotorSpeed(motorSpeeds, ACTUATOR_MOTOR_LEFT, ACTUATOR_MOTOR_LEFT_DIRECTION_PIN, ACTUATOR_MOTOR_LEFT_SPEED_PIN);
     }
   }
+  #endif
 
   // Start scanning bottle
   if (is_state == is_start)
   {
+    #ifdef SERIAL_ENABLE
+    Serial.print("start");
+    #endif
+
     is_state = is_turn_start;
   }
 
@@ -114,12 +118,23 @@ void stateScanningRoutine(int proximityMeasurements[SENSOR_PROXIMITY_COUNT][SENS
     zStart = getMedianIMUZOrientationValue(imuMeasurements);
     zLast = zStart;
     is_state = is_turning;
+
+    #ifdef SERIAL_ENABLE
+    Serial.print("start angle: ");
+    Serial.print(zStart);
+    #endif
   }
   else if (is_state == is_turning)
   {
     float z = getMedianIMUZOrientationValue(imuMeasurements);
+
     if (fabsf(z - zLast) > SCANNING_Z_DELTA_THRESHOLD)
     {
+      #ifdef SERIAL_ENABLE
+      Serial.print("angle: ");
+      Serial.print(z);
+      #endif
+
       int proxRight = getAverageProximityValue(proximityMeasurements, SENSOR_PROXIMITY_RIGHT) - proximityAmbientMeasurements[SENSOR_PROXIMITY_RIGHT];
       int proxForwardRight = getAverageProximityValue(proximityMeasurements, SENSOR_PROXIMITY_FORWARD_RIGHT) - proximityAmbientMeasurements[SENSOR_PROXIMITY_FORWARD_RIGHT];
       int proxForward = getAverageProximityValue(proximityMeasurements, SENSOR_PROXIMITY_FORWARD) - proximityAmbientMeasurements[SENSOR_PROXIMITY_FORWARD];
@@ -189,26 +204,29 @@ void stateScanningRoutine(int proximityMeasurements[SENSOR_PROXIMITY_COUNT][SENS
       // One revolution
       if (zOverflow && z > zStart)
       {
-        // Serial.print("MAX Right: ");
-        // Serial.print(scanMaxProxRight);
-        // Serial.print(",");
-        // Serial.println(scanMaxAngleRight);
-        // Serial.print("MAX Forward Right: ");
-        // Serial.print(scanMaxProxLeft);
-        // Serial.print(",");
-        // Serial.println(scanMaxAngleForwardRight);
-        // Serial.print("MAX Forward: ");
-        // Serial.print(scanMaxProxForward);
-        // Serial.print(",");
-        // Serial.println(scanMaxAngleForward);
-        // Serial.print("MAX Forward Left: ");
-        // Serial.print(scanMaxProxForwardLeft);
-        // Serial.print(",");
-        // Serial.println(scanMaxAngleForwardLeft);
-        // Serial.print("MAX Left: ");
-        // Serial.print(scanMaxProxLeft);
-        // Serial.print(",");
-        // Serial.println(scanMaxAngleLeft);
+        #ifdef SERIAL_ENABLE
+        Serial.print("MAX Right: ");
+        Serial.print(scanMaxProxRight);
+        Serial.print(",");
+        Serial.println(scanMaxAngleRight);
+        Serial.print("MAX Forward Right: ");
+        Serial.print(scanMaxProxLeft);
+        Serial.print(",");
+        Serial.println(scanMaxAngleForwardRight);
+        Serial.print("MAX Forward: ");
+        Serial.print(scanMaxProxForward);
+        Serial.print(",");
+        Serial.println(scanMaxAngleForward);
+        Serial.print("MAX Forward Left: ");
+        Serial.print(scanMaxProxForwardLeft);
+        Serial.print(",");
+        Serial.println(scanMaxAngleForwardLeft);
+        Serial.print("MAX Left: ");
+        Serial.print(scanMaxProxLeft);
+        Serial.print(",");
+        Serial.print(scanMaxAngleLeft);
+        Serial.print("\t\t\t");
+        #endif
 
         int count = 1;
         targetAngle = scanMaxAngleForward;
@@ -236,8 +254,10 @@ void stateScanningRoutine(int proximityMeasurements[SENSOR_PROXIMITY_COUNT][SENS
 
         targetAngle /= count;
 
+        #ifdef SERIAL_ENABLE
         Serial.print("Target angle: ");
         Serial.print(targetAngle);
+        #endif
 
 
         // Stop motors
@@ -256,6 +276,10 @@ void stateScanningRoutine(int proximityMeasurements[SENSOR_PROXIMITY_COUNT][SENS
     if (fabsf(motorSpeedMeasurements[ACTUATOR_MOTOR_LEFT]) < SCANNING_STOPPING_THRESHOLD &&
         fabsf(motorSpeedMeasurements[ACTUATOR_MOTOR_RIGHT]) < SCANNING_STOPPING_THRESHOLD)
     {
+      #ifdef SERIAL_ENABLE
+      Serial.print("scanning stopped");
+      #endif
+
       is_state = is_orienting;
     }
   }
@@ -266,9 +290,12 @@ void stateScanningRoutine(int proximityMeasurements[SENSOR_PROXIMITY_COUNT][SENS
     float turningSpeed = error * SCANNING_ORIENTING_REACTIVITY;
     turningSpeed = max(turningSpeed, -SCANNING_ORIENTING_MAX_SPEED);
     turningSpeed = min(turningSpeed, SCANNING_ORIENTING_MAX_SPEED);
+    #ifdef SERIAL_ENABLE
+    Serial.print("orienting: ");
     Serial.print(error);
     Serial.print(", ");
     Serial.print(turningSpeed);
+    #endif
 
     motorSpeeds[ACTUATOR_MOTOR_RIGHT] = turningSpeed;
     motorSpeeds[ACTUATOR_MOTOR_LEFT] = -turningSpeed;
@@ -277,6 +304,10 @@ void stateScanningRoutine(int proximityMeasurements[SENSOR_PROXIMITY_COUNT][SENS
 
     if (fabsf(error) < SCANNING_ORIENTING_STOPPING_THRESHOLD)
     {
+      #ifdef SERIAL_ENABLE
+      Serial.print(" > stopping");
+      #endif
+
       // Stop motors
       motorSpeeds[ACTUATOR_MOTOR_RIGHT] = 0;
       motorSpeeds[ACTUATOR_MOTOR_LEFT] = 0;
@@ -289,10 +320,6 @@ void stateScanningRoutine(int proximityMeasurements[SENSOR_PROXIMITY_COUNT][SENS
   }
   else if (is_state == is_checking)
   {
-    Serial.print(getFilteredAverageTOFValue(tofMeasurements, SENSOR_TOF_CENTER));
-    Serial.print(", ");
-    Serial.print(getAverageProximityValue(proximityMeasurements, SENSOR_PROXIMITY_FORWARD) - proximityAmbientMeasurements[SENSOR_PROXIMITY_FORWARD]);
-
     float tofLeft = getFilteredAverageTOFValue(tofMeasurements, SENSOR_TOF_CENTER);
     float tofCenter = getFilteredAverageTOFValue(tofMeasurements, SENSOR_TOF_CENTER);
     float tofRight = getFilteredAverageTOFValue(tofMeasurements, SENSOR_TOF_CENTER);
@@ -300,12 +327,23 @@ void stateScanningRoutine(int proximityMeasurements[SENSOR_PROXIMITY_COUNT][SENS
         (tofCenter > 0 && tofCenter < SCANNING_CHECKING_TOF_CENTER_THRESHOLD) ||
         (tofRight > 0 && tofRight < SCANNING_CHECKING_TOF_LEFT_THRESHOLD))
     {
-      Serial.print("OBASTACLE IN FRONT OF US!");
+      #ifdef SERIAL_ENABLE
+      Serial.print("obstacle detected");
+      #endif
       is_state = is_off;
     }
     else if (checkingCounter++ > SCANNING_CHECKING_MEASUREMENTS)
     {
-      Serial.print("GET THE BOTTLE!");
+      #ifdef SERIAL_ENABLE
+      Serial.print("bottle detected");
+      #endif
+      is_state = is_off;
+    }
+    else
+    {
+      #ifdef SERIAL_ENABLE
+      Serial.print("nothing detected");
+      #endif
       is_state = is_off;
     }
   }

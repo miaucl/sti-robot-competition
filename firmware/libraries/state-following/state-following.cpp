@@ -33,10 +33,6 @@ void stateFollowingEnterRoutine(boolean ledState[LED_COUNT],
                                 boolean flags[FLAG_COUNT])
 {
   ledState[LED_RUNNING] = HIGH;
-
-  #ifdef SERIAL_ENABLE
-  Serial.println("Following Wall");
-  #endif
 }
 
 void stateFollowingRoutine(int proximityMeasurements[SENSOR_PROXIMITY_COUNT][SENSOR_PROXIMITY_MEASUREMENT_COUNT],
@@ -50,10 +46,13 @@ void stateFollowingRoutine(int proximityMeasurements[SENSOR_PROXIMITY_COUNT][SEN
                           boolean ledState[LED_COUNT],
                           boolean flags[FLAG_COUNT])
 {
-  Serial.print("following wall(");
+  #ifdef SERIAL_ENABLE
+  Serial.print("following(");
   Serial.print(is_state);
   Serial.print(")\t");
-  // DEBUG
+  #endif
+
+  #ifdef DEBUG_ENABLE
   if (Serial.available() > 0)
   {
     char b = Serial.read();
@@ -72,38 +71,47 @@ void stateFollowingRoutine(int proximityMeasurements[SENSOR_PROXIMITY_COUNT][SEN
       writeRawMotorSpeed(motorSpeeds, ACTUATOR_MOTOR_LEFT, ACTUATOR_MOTOR_LEFT_DIRECTION_PIN, ACTUATOR_MOTOR_LEFT_SPEED_PIN);
     }
   }
+  #endif
 
   // Start following wall
   if (is_state == is_start)
   {
+    #ifdef SERIAL_ENABLE
     Serial.print("start\t");
+    #endif
 
     // determine if wall on the left or right is to follow
-    if (getAverageProximityValue(proximityMeasurements, SENSOR_PROXIMITY_FORWARD_RIGHT)>getAverageProximityValue(proximityMeasurements, SENSOR_PROXIMITY_FORWARD_LEFT) && false)
+    if (getAverageProximityValue(proximityMeasurements, SENSOR_PROXIMITY_FORWARD_RIGHT) > getAverageProximityValue(proximityMeasurements, SENSOR_PROXIMITY_FORWARD_LEFT) && false)
     {
-        followingWallRight = 1;
-        Serial.println("Following wall on the right");
-        proximityToConsider = SENSOR_PROXIMITY_FORWARD_RIGHT;
-        wallNearMotor = ACTUATOR_MOTOR_RIGHT;
-        wallNearMotorDirectionPin = ACTUATOR_MOTOR_RIGHT_DIRECTION_PIN;
-        wallNearMotorSpeedPin = ACTUATOR_MOTOR_RIGHT_SPEED_PIN;
+      #ifdef SERIAL_ENABLE
+      Serial.println("> wall: right");
+      #endif
 
-        wallFarMotor = ACTUATOR_MOTOR_LEFT;
-        wallFarMotorDirectionPin = ACTUATOR_MOTOR_LEFT_DIRECTION_PIN;
-        wallFarMotorSpeedPin = ACTUATOR_MOTOR_LEFT_SPEED_PIN;
+      followingWallRight = 1;
+      proximityToConsider = SENSOR_PROXIMITY_FORWARD_RIGHT;
+      wallNearMotor = ACTUATOR_MOTOR_RIGHT;
+      wallNearMotorDirectionPin = ACTUATOR_MOTOR_RIGHT_DIRECTION_PIN;
+      wallNearMotorSpeedPin = ACTUATOR_MOTOR_RIGHT_SPEED_PIN;
+
+      wallFarMotor = ACTUATOR_MOTOR_LEFT;
+      wallFarMotorDirectionPin = ACTUATOR_MOTOR_LEFT_DIRECTION_PIN;
+      wallFarMotorSpeedPin = ACTUATOR_MOTOR_LEFT_SPEED_PIN;
     }
     else
     {
-        followingWallLeft = 1;
-        Serial.println("Following wall on the left");
-        proximityToConsider = SENSOR_PROXIMITY_FORWARD_LEFT;
-        wallNearMotor = ACTUATOR_MOTOR_LEFT;
-        wallNearMotorDirectionPin = ACTUATOR_MOTOR_LEFT_DIRECTION_PIN;
-        wallNearMotorSpeedPin = ACTUATOR_MOTOR_LEFT_SPEED_PIN;
+      #ifdef SERIAL_ENABLE
+      Serial.println("> wall: right");
+      #endif
 
-        wallFarMotor = ACTUATOR_MOTOR_RIGHT;
-        wallFarMotorDirectionPin = ACTUATOR_MOTOR_RIGHT_DIRECTION_PIN;
-        wallFarMotorSpeedPin = ACTUATOR_MOTOR_RIGHT_SPEED_PIN;
+      followingWallLeft = 1;
+      proximityToConsider = SENSOR_PROXIMITY_FORWARD_LEFT;
+      wallNearMotor = ACTUATOR_MOTOR_LEFT;
+      wallNearMotorDirectionPin = ACTUATOR_MOTOR_LEFT_DIRECTION_PIN;
+      wallNearMotorSpeedPin = ACTUATOR_MOTOR_LEFT_SPEED_PIN;
+
+      wallFarMotor = ACTUATOR_MOTOR_RIGHT;
+      wallFarMotorDirectionPin = ACTUATOR_MOTOR_RIGHT_DIRECTION_PIN;
+      wallFarMotorSpeedPin = ACTUATOR_MOTOR_RIGHT_SPEED_PIN;
     }
 
     // Set default calibrating speed
@@ -118,8 +126,12 @@ void stateFollowingRoutine(int proximityMeasurements[SENSOR_PROXIMITY_COUNT][SEN
 
   else if (is_state == is_following_wall)
   {
-    if (getAverageProximityValue(proximityMeasurements, SENSOR_PROXIMITY_FORWARD)-proximityAmbientMeasurements[SENSOR_PROXIMITY_FORWARD] > FOLLOWING_WALL_CORNER_DETECTED_THRESHOLD)
+    if (getAverageProximityValue(proximityMeasurements, SENSOR_PROXIMITY_FORWARD) - proximityAmbientMeasurements[SENSOR_PROXIMITY_FORWARD] > FOLLOWING_WALL_CORNER_DETECTED_THRESHOLD)
     {
+      #ifdef SERIAL_ENABLE
+      Serial.println("corner detected");
+      #endif
+
        // Stop motors
       motorSpeeds[ACTUATOR_MOTOR_RIGHT] = 0;
       motorSpeeds[ACTUATOR_MOTOR_LEFT] = 0;
@@ -127,25 +139,28 @@ void stateFollowingRoutine(int proximityMeasurements[SENSOR_PROXIMITY_COUNT][SEN
       writeMotorSpeed(motorSpeeds, ACTUATOR_MOTOR_LEFT, ACTUATOR_MOTOR_LEFT_DIRECTION_PIN, ACTUATOR_MOTOR_LEFT_SPEED_PIN);
 
       is_state = is_stopping;
-      Serial.print("Corner detected: ");
-      Serial.println(getAverageProximityValue(proximityMeasurements, SENSOR_PROXIMITY_FORWARD)-proximityAmbientMeasurements[SENSOR_PROXIMITY_FORWARD]);
     }
     else
     {
-      float error = (getAverageProximityValue(proximityMeasurements, proximityToConsider) -
-                    proximityAmbientMeasurements[proximityToConsider] -
-                    FOLLOWING_WALL_DESIRED_WALL_DISTANCE);
-      Serial.print("Sensor value\t");
-      Serial.print(getAverageProximityValue(proximityMeasurements, proximityToConsider));
-      Serial.print(" Error\t");
-      Serial.print(error);
+      int prox = getAverageProximityValue(proximityMeasurements, proximityToConsider) - proximityAmbientMeasurements[proximityToConsider];
+      float error = (prox - FOLLOWING_WALL_DESIRED_WALL_DISTANCE);
+
       // Adjust motor speed
       motorSpeeds[wallNearMotor] = FOLLOWING_WALL_SPEED + FOLLOWING_WALL_REACTIVITY * error;
-      Serial.print(" Near\t");
-      Serial.print(motorSpeeds[wallNearMotor]);
       motorSpeeds[wallFarMotor] = FOLLOWING_WALL_SPEED - FOLLOWING_WALL_REACTIVITY * error;
-      Serial.print(" Far\t");
-      Serial.println(motorSpeeds[wallFarMotor]);
+
+      #ifdef SERIAL_ENABLE
+      Serial.println("following: ");
+      Serial.print("\tprox: ");
+      Serial.print(prox);
+      Serial.print("\terror: ");
+      Serial.print(error);
+      Serial.print("\tspeed: ");
+      Serial.print(motorSpeeds[wallNearMotor]);
+      Serial.print(", ");
+      Serial.print(motorSpeeds[wallFarMotor]);
+      #endif
+
       writeRawMotorSpeed(motorSpeeds, wallNearMotor, wallNearMotorDirectionPin, wallNearMotorSpeedPin);
       writeRawMotorSpeed(motorSpeeds, wallFarMotor, wallFarMotorDirectionPin, wallFarMotorSpeedPin);
     }
@@ -154,14 +169,14 @@ void stateFollowingRoutine(int proximityMeasurements[SENSOR_PROXIMITY_COUNT][SEN
 
   else if (is_state == is_stopping)
   {
-    Serial.print("motor: ");
-    Serial.println(motorSpeedMeasurements[ACTUATOR_MOTOR_LEFT]);
     if (motorSpeedMeasurements[ACTUATOR_MOTOR_LEFT] < FOLLOWING_WALL_STOPPING_THRESHOLD &&
         motorSpeedMeasurements[ACTUATOR_MOTOR_RIGHT] < FOLLOWING_WALL_STOPPING_THRESHOLD)
     {
+      #ifdef SERIAL_ENABLE
+      Serial.print("stopped");
+      #endif
 
-
-    //exit -> raise flag
+      is_state = is_off;
     }
   }
 
