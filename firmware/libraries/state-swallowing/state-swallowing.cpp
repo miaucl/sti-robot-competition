@@ -31,6 +31,8 @@ void stateSwallowingEnterRoutine( boolean ledState[LED_COUNT],
                                   boolean flags[FLAG_COUNT])
 {
   ledState[LED_RUNNING] = HIGH;
+
+  is_state = is_start;
 }
 
 void stateSwallowingRoutine(int proximityMeasurements[SENSOR_PROXIMITY_COUNT][SENSOR_PROXIMITY_MEASUREMENT_COUNT],
@@ -140,7 +142,7 @@ void stateSwallowingRoutine(int proximityMeasurements[SENSOR_PROXIMITY_COUNT][SE
 
       is_state = is_stopping;
     }
-    else if (millis() - swallowingTimestamp > SWALLOWING_DURATION_OFFSET && fabs(proxDetectRight) > SWALLOWING_BOTTLE_DETECTION_THRESHOLD && fabs(proxDetectLeft) > SWALLOWING_BOTTLE_DETECTION_THRESHOLD)
+    else if (millis() - swallowingTimestamp > SWALLOWING_DURATION_OFFSET && (fabs(proxDetectRight) > SWALLOWING_BOTTLE_DETECTION_THRESHOLD || fabs(proxDetectLeft) > SWALLOWING_BOTTLE_DETECTION_THRESHOLD))
     {
       #ifdef SERIAL_ENABLE
       Serial.print(" > detection");

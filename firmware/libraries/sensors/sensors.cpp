@@ -558,10 +558,12 @@ float getMedianIMUZOrientationValue(float imuMeasurements[SENSOR_IMU_MEASUREMENT
 void configureBtns()
 {
   pinMode(BTN_START_PIN, INPUT_PULLUP);
+  pinMode(BTN_STATE_PIN, INPUT_PULLUP);
 }
 
 // Read the button states
 void readBtns(boolean btnState[BTN_COUNT])
 {
   btnState[BTN_START] = (digitalRead(BTN_START_PIN) == LOW);
+  btnState[BTN_STATE] = (digitalRead(BTN_STATE_PIN) == LOW);
 }

@@ -180,6 +180,29 @@ void loop()
 
 
 
+  #ifdef DEBUG_ENABLE
+  // Testing
+  if (Serial.available() > 0)
+  {
+    // read the incoming byte:
+    char b = Serial.read();
+
+    if (b == ' ') 
+    {
+      stopMotor(ACTUATOR_MOTOR_RIGHT, ACTUATOR_MOTOR_RIGHT_DIRECTION_PIN, ACTUATOR_MOTOR_RIGHT_SPEED_PIN);
+      stopMotor(ACTUATOR_MOTOR_LEFT, ACTUATOR_MOTOR_LEFT_DIRECTION_PIN, ACTUATOR_MOTOR_LEFT_SPEED_PIN);
+
+      globalPause = !globalPause;
+    }
+    else if (b == '0') btnState[0] = !btnState[0];
+    else if (b == '1') btnState[1] = !btnState[1];
+    else if (b == '2') btnState[2] = !btnState[2];
+    else if (b == '3') btnState[3] = !btnState[3];
+  }
+  #endif
+
+
+
 
 
   // Check for state transition

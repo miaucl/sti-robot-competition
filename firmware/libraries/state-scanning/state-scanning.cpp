@@ -28,34 +28,55 @@ static int maxProx = 0;
 static int maxProxVal = 0;
 static int beforeProxVal = 0;
 static long scanningTimestamp = 0;
-static int proxDetect = 0;
-static int proxDetectLeft = 0;
-static int proxDetectRight = 0;
 static int bottleInRobot = 0;
 static boolean zOverflow = false;
 static float zStart = 0;
 static float zLast = 0;
 
-int scanMaxProxRight = 0;
-int scanMaxAngleRight = 0;
-int scanMaxProxForwardRight = 0;
-int scanMaxAngleForwardRight = 0;
-int scanMaxProxForward = 0;
-int scanMaxAngleForward = 0;
-int scanMaxProxLeft = 0;
-int scanMaxAngleLeft = 0;
-int scanMaxProxForwardLeft = 0;
-int scanMaxAngleForwardLeft = 0;
+static int scanMaxProxRight = 0;
+static int scanMaxAngleRight = 0;
+static int scanMaxProxForwardRight = 0;
+static int scanMaxAngleForwardRight = 0;
+static int scanMaxProxForward = 0;
+static int scanMaxAngleForward = 0;
+static int scanMaxProxLeft = 0;
+static int scanMaxAngleLeft = 0;
+static int scanMaxProxForwardLeft = 0;
+static int scanMaxAngleForwardLeft = 0;
+static int count = 0;
 
-int targetAngle = 0;
-
-int checkingCounter = 0;
+static int targetAngle = 0;
 
 
 void stateScanningEnterRoutine( boolean ledState[LED_COUNT],
                                 boolean flags[FLAG_COUNT])
 {
   ledState[LED_RUNNING] = HIGH;
+
+  is_state = is_start;
+
+  maxProx = 0;
+  maxProxVal = 0;
+  beforeProxVal = 0;
+  scanningTimestamp = 0;
+
+  scanMaxProxRight = 0;
+  scanMaxAngleRight = 0;
+  scanMaxProxForwardRight = 0;
+  scanMaxAngleForwardRight = 0;
+  scanMaxProxForward = 0;
+  scanMaxAngleForward = 0;
+  scanMaxProxLeft = 0;
+  scanMaxAngleLeft = 0;
+  scanMaxProxForwardLeft = 0;
+  scanMaxAngleForwardLeft = 0;
+  count = 0;
+
+  targetAngle = 0;
+
+  zOverflow = false;
+
+  bottleInRobot = 0;
 }
 
 void stateScanningRoutine(int proximityMeasurements[SENSOR_PROXIMITY_COUNT][SENSOR_PROXIMITY_MEASUREMENT_COUNT],
@@ -162,35 +183,35 @@ void stateScanningRoutine(int proximityMeasurements[SENSOR_PROXIMITY_COUNT][SENS
       // Serial.print(getFilteredAverageTOFValue(tofMeasurements, SENSOR_TOF_CENTER));
       // Serial.println();
 
-      if (scanMaxProxRight < proxRight)
+      if (scanMaxProxRight < proxRight && SCANNING_PROX_THRESHOLD < proxRight)
       {
         scanMaxProxRight = proxRight;
         scanMaxAngleRight = z + SENSOR_PROXIMITY_RIGHT_OFFSET;
         if (scanMaxAngleRight > 180) scanMaxAngleRight -= 360;
         if (scanMaxAngleRight < -180) scanMaxAngleRight += 360;
       }
-      if (scanMaxProxForwardRight < proxForwardRight)
+      if (scanMaxProxForwardRight < proxForwardRight && SCANNING_PROX_THRESHOLD < proxForwardRight)
       {
         scanMaxProxForwardRight = proxForwardRight;
         scanMaxAngleForwardRight = z + SENSOR_PROXIMITY_FORWARD_RIGHT_OFFSET;
         if (scanMaxAngleForwardRight > 180) scanMaxAngleForwardRight -= 360;
         if (scanMaxAngleForwardRight < -180) scanMaxAngleForwardRight += 360;
       }
-      if (scanMaxProxForward < proxForward)
+      if (scanMaxProxForward < proxForward && SCANNING_PROX_THRESHOLD < proxForward)
       {
         scanMaxProxForward = proxForward;
         scanMaxAngleForward = z + SENSOR_PROXIMITY_FORWARD_OFFSET;
         if (scanMaxAngleForward > 180) scanMaxAngleForward -= 360;
         if (scanMaxAngleForward < -180) scanMaxAngleForward += 360;
       }
-      if (scanMaxProxForwardLeft < proxForwardLeft)
+      if (scanMaxProxForwardLeft < proxForwardLeft && SCANNING_PROX_THRESHOLD < proxForwardLeft)
       {
         scanMaxProxForwardLeft = proxForwardLeft;
         scanMaxAngleForwardLeft = z + SENSOR_PROXIMITY_FORWARD_LEFT_OFFSET;
         if (scanMaxAngleForwardLeft > 180) scanMaxAngleForwardLeft -= 360;
         if (scanMaxAngleForwardLeft < -180) scanMaxAngleForwardLeft += 360;
       }
-      if (scanMaxProxLeft < proxLeft)
+      if (scanMaxProxLeft < proxLeft && SCANNING_PROX_THRESHOLD < proxLeft)
       {
         scanMaxProxLeft = proxLeft;
         scanMaxAngleLeft = z + SENSOR_PROXIMITY_LEFT_OFFSET;
@@ -205,68 +226,85 @@ void stateScanningRoutine(int proximityMeasurements[SENSOR_PROXIMITY_COUNT][SENS
       if (zOverflow && z > zStart)
       {
         #ifdef SERIAL_ENABLE
-        Serial.print("MAX Right: ");
+        Serial.print("\tMAX Right: ");
         Serial.print(scanMaxProxRight);
         Serial.print(",");
-        Serial.println(scanMaxAngleRight);
-        Serial.print("MAX Forward Right: ");
+        Serial.print(scanMaxAngleRight);
+        Serial.print("\tMAX Forward Right: ");
         Serial.print(scanMaxProxLeft);
         Serial.print(",");
-        Serial.println(scanMaxAngleForwardRight);
-        Serial.print("MAX Forward: ");
+        Serial.print(scanMaxAngleForwardRight);
+        Serial.print("\tMAX Forward: ");
         Serial.print(scanMaxProxForward);
         Serial.print(",");
-        Serial.println(scanMaxAngleForward);
-        Serial.print("MAX Forward Left: ");
+        Serial.print(scanMaxAngleForward);
+        Serial.print("\tMAX Forward Left: ");
         Serial.print(scanMaxProxForwardLeft);
         Serial.print(",");
-        Serial.println(scanMaxAngleForwardLeft);
-        Serial.print("MAX Left: ");
+        Serial.print(scanMaxAngleForwardLeft);
+        Serial.print("\tMAX Left: ");
         Serial.print(scanMaxProxLeft);
         Serial.print(",");
         Serial.print(scanMaxAngleLeft);
         Serial.print("\t\t\t");
         #endif
 
-        int count = 1;
-        targetAngle = scanMaxAngleForward;
+        targetAngle = 0;
         // Care for circularity of values (-pi,pi)
-        if (fabsf(targetAngle - scanMaxAngleRight) < 180)
-        {
-          targetAngle += scanMaxAngleRight;
-          count++;
-        }
-        if (fabsf(targetAngle - scanMaxAngleForwardRight) < 180)
-        {
-          targetAngle += scanMaxAngleForwardRight;
-          count++;
-        }
-        if (fabsf(targetAngle - scanMaxAngleForward) < 180)
+        if (fabsf(targetAngle - scanMaxAngleForward) < 180 && scanMaxProxForward > 0)
         {
           targetAngle += scanMaxAngleForward;
           count++;
         }
-        if (fabsf(targetAngle - scanMaxAngleLeft) < 180)
+        if (fabsf(targetAngle - scanMaxAngleRight) < 180 && scanMaxProxRight > 0)
+        {
+          targetAngle += scanMaxAngleRight;
+          count++;
+        }
+        if (fabsf(targetAngle - scanMaxAngleForwardRight) < 180 && scanMaxProxForwardRight > 0)
+        {
+          targetAngle += scanMaxAngleForwardRight;
+          count++;
+        }
+        if (fabsf(targetAngle - scanMaxAngleForward) < 180 && scanMaxProxForwardLeft > 0)
+        {
+          targetAngle += scanMaxAngleForward;
+          count++;
+        }
+        if (fabsf(targetAngle - scanMaxAngleLeft) < 180 && scanMaxProxLeft > 0)
         {
           targetAngle += scanMaxAngleLeft;
           count++;
         }
 
-        targetAngle /= count;
+        if (count > 0)
+        {
+          targetAngle /= count;
 
-        #ifdef SERIAL_ENABLE
-        Serial.print("Target angle: ");
-        Serial.print(targetAngle);
-        #endif
+          #ifdef SERIAL_ENABLE
+          Serial.print("target angle: ");
+          Serial.print(targetAngle);
+          #endif
 
 
-        // Stop motors
-        motorSpeeds[ACTUATOR_MOTOR_RIGHT] = 0;
-        motorSpeeds[ACTUATOR_MOTOR_LEFT] = 0;
-        writeMotorSpeed(motorSpeeds, ACTUATOR_MOTOR_RIGHT, ACTUATOR_MOTOR_RIGHT_DIRECTION_PIN, ACTUATOR_MOTOR_RIGHT_SPEED_PIN);
-        writeMotorSpeed(motorSpeeds, ACTUATOR_MOTOR_LEFT, ACTUATOR_MOTOR_LEFT_DIRECTION_PIN, ACTUATOR_MOTOR_LEFT_SPEED_PIN);
+          // Stop motors
+          motorSpeeds[ACTUATOR_MOTOR_RIGHT] = 0;
+          motorSpeeds[ACTUATOR_MOTOR_LEFT] = 0;
+          writeMotorSpeed(motorSpeeds, ACTUATOR_MOTOR_RIGHT, ACTUATOR_MOTOR_RIGHT_DIRECTION_PIN, ACTUATOR_MOTOR_RIGHT_SPEED_PIN);
+          writeMotorSpeed(motorSpeeds, ACTUATOR_MOTOR_LEFT, ACTUATOR_MOTOR_LEFT_DIRECTION_PIN, ACTUATOR_MOTOR_LEFT_SPEED_PIN);
 
-        is_state = is_turn_stopping;
+          is_state = is_turn_stopping;
+        }
+        else
+        {
+          #ifdef SERIAL_ENABLE
+          Serial.print("nothing detected");
+          #endif
+
+          flags[FLAG_NOTHING_DETECTED] = 1;
+
+          is_state = is_off;
+        }
       }
     }
   }
@@ -314,7 +352,6 @@ void stateScanningRoutine(int proximityMeasurements[SENSOR_PROXIMITY_COUNT][SENS
       writeMotorSpeed(motorSpeeds, ACTUATOR_MOTOR_RIGHT, ACTUATOR_MOTOR_RIGHT_DIRECTION_PIN, ACTUATOR_MOTOR_RIGHT_SPEED_PIN);
       writeMotorSpeed(motorSpeeds, ACTUATOR_MOTOR_LEFT, ACTUATOR_MOTOR_LEFT_DIRECTION_PIN, ACTUATOR_MOTOR_LEFT_SPEED_PIN);
 
-      checkingCounter = 0;
       is_state = is_checking;
     }
   }
@@ -330,20 +367,19 @@ void stateScanningRoutine(int proximityMeasurements[SENSOR_PROXIMITY_COUNT][SENS
       #ifdef SERIAL_ENABLE
       Serial.print("obstacle detected");
       #endif
-      is_state = is_off;
-    }
-    else if (checkingCounter++ > SCANNING_CHECKING_MEASUREMENTS)
-    {
-      #ifdef SERIAL_ENABLE
-      Serial.print("bottle detected");
-      #endif
+
+      flags[FLAG_WALL_DETECTED] = 1;
+
       is_state = is_off;
     }
     else
     {
       #ifdef SERIAL_ENABLE
-      Serial.print("nothing detected");
+      Serial.print("bottle detected");
       #endif
+
+      flags[FLAG_BOTTLE_DETECTED] = 1;
+
       is_state = is_off;
     }
   }
