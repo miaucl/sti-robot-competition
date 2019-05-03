@@ -33,11 +33,6 @@ void stateWanderEnterRoutine( boolean ledState[LED_COUNT],
                               boolean flags[FLAG_COUNT])
 {
   ledState[LED_RUNNING] = HIGH;
-
-  #ifdef SERIAL_ENABLE
-  Serial.println("Random Wandering");
-  #endif
-
 }
 
 void stateWanderRoutine(int proximityMeasurements[SENSOR_PROXIMITY_COUNT][SENSOR_PROXIMITY_MEASUREMENT_COUNT],
@@ -51,10 +46,13 @@ void stateWanderRoutine(int proximityMeasurements[SENSOR_PROXIMITY_COUNT][SENSOR
                         boolean ledState[LED_COUNT],
                         boolean flags[FLAG_COUNT])
 {
+  #ifdef SERIAL_ENABLE
   Serial.print("wander(");
   Serial.print(is_state);
   Serial.print(")\t");
-  // DEBUG
+  #endif
+
+  #ifdef DEBUG_ENABLE
   if (Serial.available() > 0)
   {
     char b = Serial.read();
@@ -73,6 +71,7 @@ void stateWanderRoutine(int proximityMeasurements[SENSOR_PROXIMITY_COUNT][SENSOR
       writeMotorSpeed(motorSpeeds, ACTUATOR_MOTOR_LEFT, ACTUATOR_MOTOR_LEFT_DIRECTION_PIN, ACTUATOR_MOTOR_LEFT_SPEED_PIN);
     }
   }
+  #endif
 
   int proximityRight = getAverageProximityValue(proximityMeasurements, SENSOR_PROXIMITY_RIGHT) - proximityAmbientMeasurements[SENSOR_PROXIMITY_RIGHT];
   int proximityForwardRight = getAverageProximityValue(proximityMeasurements, SENSOR_PROXIMITY_FORWARD_RIGHT) - proximityAmbientMeasurements[SENSOR_PROXIMITY_FORWARD_RIGHT];
@@ -89,8 +88,9 @@ void stateWanderRoutine(int proximityMeasurements[SENSOR_PROXIMITY_COUNT][SENSOR
   // Start moving
   if (is_state == is_start)
   {
+    #ifdef SERIAL_ENABLE
     Serial.print("start\t");
-
+    #endif
     // Set default wandering speed
     motorSpeeds[ACTUATOR_MOTOR_RIGHT] = WANDER_SPEED;
     motorSpeeds[ACTUATOR_MOTOR_LEFT] = WANDER_SPEED;
@@ -102,6 +102,7 @@ void stateWanderRoutine(int proximityMeasurements[SENSOR_PROXIMITY_COUNT][SENSOR
   }
   else if (is_state == is_forward)
   {
+    #ifdef SERIAL_ENABLE
     Serial.print("tof: ");
     Serial.print(tofLeft);
     Serial.print(", ");
@@ -118,6 +119,7 @@ void stateWanderRoutine(int proximityMeasurements[SENSOR_PROXIMITY_COUNT][SENSOR
     Serial.print(proximityForwardLeft);
     Serial.print(", ");
     Serial.print(proximityLeft);
+    #endif
 
     if (ignoreRight)
     {
@@ -176,9 +178,6 @@ void stateWanderRoutine(int proximityMeasurements[SENSOR_PROXIMITY_COUNT][SENSOR
   }
   else if (is_state == is_stopping)
   {
-    Serial.print("motor: ");
-    Serial.print(motorSpeedMeasurements[ACTUATOR_MOTOR_LEFT]);
-    Serial.print("\t");
     if (fabsf(motorSpeedMeasurements[ACTUATOR_MOTOR_LEFT]) < WANDER_STOPPING_THRESHOLD &&
         fabsf(motorSpeedMeasurements[ACTUATOR_MOTOR_RIGHT]) < WANDER_STOPPING_THRESHOLD)
     {
@@ -187,17 +186,18 @@ void stateWanderRoutine(int proximityMeasurements[SENSOR_PROXIMITY_COUNT][SENSOR
           (tofRight > WANDER_TOF_RIGHT_THRESHOLD || tofRight == 0) &&
           proximityForward > WANDER_PROXIMITY_THRESHOLD)
       {
+        #ifdef SERIAL_ENABLE
+        Serial.print("prox detection");
+        #endif
+
         is_state = is_detected;
       }
       else
       {
-        // Make a turn
+        #ifdef SERIAL_ENABLE
+        Serial.print("tof detection");
+        #endif
         is_state = is_turn_start;
-
-        Serial.print(proximityForward);
-        Serial.print("\t");
-        Serial.print(tofCenter);
-        Serial.print("\t");
       }
     }
   }
@@ -208,7 +208,9 @@ void stateWanderRoutine(int proximityMeasurements[SENSOR_PROXIMITY_COUNT][SENSOR
     else if (tofLeft > 0) turnLeft = true;
     else turnLeft = millis() % 2 == 0;
 
-    Serial.print("turn\t");
+    #ifdef SERIAL_ENABLE
+    Serial.print("start turn");
+    #endif
     // Set default turning speed
     if (turnLeft)
     {
@@ -231,23 +233,19 @@ void stateWanderRoutine(int proximityMeasurements[SENSOR_PROXIMITY_COUNT][SENSOR
   }
   else if (is_state == is_turning)
   {
+    #ifdef SERIAL_ENABLE
     Serial.print("time: ");
     Serial.print(millis() - turn_timestamp);
-    Serial.print("\t");
+    #endif
 
     if ((tofLeft > WANDER_TOF_LEFT_THRESHOLD || tofLeft == 0) &&
         (tofCenter > WANDER_TOF_CENTER_THRESHOLD || tofCenter == 0) &&
         (tofRight > WANDER_TOF_RIGHT_THRESHOLD || tofRight == 0) &&
         proximityForward > WANDER_PROXIMITY_THRESHOLD)
     {
-      Serial.print(proximityForward);
-      Serial.print("\t");
-      Serial.print(tofLeft);
-      Serial.print("\t");
-      Serial.print(tofCenter);
-      Serial.print("\t");
-      Serial.print(tofRight);
-      Serial.print("\t");
+      #ifdef SERIAL_ENABLE
+      Serial.print(" > stopping");
+      #endif
 
       // Stop motors
       motorSpeeds[ACTUATOR_MOTOR_RIGHT] = 0;
@@ -270,30 +268,34 @@ void stateWanderRoutine(int proximityMeasurements[SENSOR_PROXIMITY_COUNT][SENSOR
   }
   else if (is_state == is_turn_stopping)
   {
-    Serial.print("motor: ");
-    Serial.print(motorSpeedMeasurements[ACTUATOR_MOTOR_LEFT]);
-    Serial.print("\t");
     if (fabsf(motorSpeedMeasurements[ACTUATOR_MOTOR_LEFT]) < WANDER_STOPPING_THRESHOLD &&
         fabsf(motorSpeedMeasurements[ACTUATOR_MOTOR_RIGHT]) < WANDER_STOPPING_THRESHOLD)
     {
+      #ifdef SERIAL_ENABLE
+      Serial.print("turn stopped");
+      #endif
+
       is_state = is_start;
     }
   }
   else if (is_state == is_detected_stopping)
   {
-    Serial.print("motor: ");
-    Serial.print(motorSpeedMeasurements[ACTUATOR_MOTOR_LEFT]);
-    Serial.print("\t");
     if (fabsf(motorSpeedMeasurements[ACTUATOR_MOTOR_LEFT]) < WANDER_STOPPING_THRESHOLD &&
         fabsf(motorSpeedMeasurements[ACTUATOR_MOTOR_RIGHT]) < WANDER_STOPPING_THRESHOLD)
     {
+      #ifdef SERIAL_ENABLE
+      Serial.print("stopped");
+      #endif
+
       is_state = is_detected;
     }
   }
   else if (is_state == is_detected)
   {
-    Serial.print("detected ");
-    Serial.print("\t");
+    #ifdef SERIAL_ENABLE
+    Serial.print("detected");
+    #endif
+
   }
 
 

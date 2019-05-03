@@ -13,6 +13,7 @@
 #include "state-wander.h"
 #include "state-swallowing.h"
 #include "state-scanning.h"
+#include "state-turning.h"
 
 /*********
  * Global values
@@ -205,6 +206,7 @@ void loop()
       case s_following: stateFollowingExit(); break;
       case s_swallowing: stateSwallowingExit(); break;
       case s_scanning: stateScanningExit(); break;
+      case s_turning: stateTurningExit(); break;
     }
 
     // Enter next state
@@ -218,6 +220,7 @@ void loop()
       case s_following: stateTestEnter(); break;
       case s_swallowing: stateSwallowingEnter(); break;
       case s_scanning: stateScanningEnter(); break;
+      case s_turning: stateTurningEnter(); break;
     }
 
     // Set next state
@@ -238,6 +241,7 @@ void loop()
     case s_following: stateFollowing(); break;
     case s_swallowing: stateSwallowing(); break;
     case s_scanning: stateScanning(); break;
+    case s_turning: stateTurning(); break;
   }
 
   // Update Estimator
@@ -483,34 +487,34 @@ void stateTest()
 
 
   updateAll();
-
-  int p = getAverageProximityValue(proximityMeasurements, SENSOR_PROXIMITY_FORWARD);
-  int tl = getFilteredAverageTOFValue(tofMeasurements, SENSOR_TOF_LEFT);
-  int tc = getFilteredAverageTOFValue(tofMeasurements, SENSOR_TOF_CENTER);
-  int tr = getFilteredAverageTOFValue(tofMeasurements, SENSOR_TOF_RIGHT);
-  if (p > 300 && (tl == 0 || tl > 32) && (tc == 0 || tc > 32) && (tr == 0 || tr > 32))
-  {
-    Serial.println("Bottle");
-  }
-  else if (p > 200 && (tl > 0 && tl < 32 || tc > 0 && tc < 32 || tr > 0 && tr < 32))
-  {
-    Serial.println("Wall");
-  }
-  else
-  {
-    Serial.println("–");
-  }
-
-//  Serial.print("Z: ");
-//  Serial.print(getMedianIMUZOrientationValue(imuMeasurements));
-//  Serial.print("\tIR: ");
-//  Serial.print(getAverageProximityValue(proximityMeasurements, SENSOR_PROXIMITY_FORWARD));
-//  Serial.print("\tTOF: ");
-//  Serial.print(getFilteredAverageTOFValue(tofMeasurements, SENSOR_TOF_LEFT));
-//  Serial.print(", ");
-//  Serial.print(getFilteredAverageTOFValue(tofMeasurements, SENSOR_TOF_CENTER));
-//  Serial.print(", ");
-//  Serial.println(getFilteredAverageTOFValue(tofMeasurements, SENSOR_TOF_RIGHT));
+//
+//  int p = getAverageProximityValue(proximityMeasurements, SENSOR_PROXIMITY_FORWARD);
+//  int tl = getFilteredAverageTOFValue(tofMeasurements, SENSOR_TOF_LEFT);
+//  int tc = getFilteredAverageTOFValue(tofMeasurements, SENSOR_TOF_CENTER);
+//  int tr = getFilteredAverageTOFValue(tofMeasurements, SENSOR_TOF_RIGHT);
+//  if (p > 300 && (tl == 0 || tl > 32) && (tc == 0 || tc > 32) && (tr == 0 || tr > 32))
+//  {
+//    Serial.println("Bottle");
+//  }
+//  else if (p > 200 && (tl > 0 && tl < 32 || tc > 0 && tc < 32 || tr > 0 && tr < 32))
+//  {
+//    Serial.println("Wall");
+//  }
+//  else
+//  {
+//    Serial.println("–");
+//  }
+//
+Serial.print("Z: ");
+Serial.print(getMedianIMUZOrientationValue(imuMeasurements));
+Serial.print("\tIR: ");
+Serial.print(getAverageProximityValue(proximityMeasurements, SENSOR_PROXIMITY_FORWARD));
+Serial.print("\tTOF: ");
+Serial.print(getFilteredAverageTOFValue(tofMeasurements, SENSOR_TOF_LEFT));
+Serial.print(", ");
+Serial.print(getFilteredAverageTOFValue(tofMeasurements, SENSOR_TOF_CENTER));
+Serial.print(", ");
+Serial.println(getFilteredAverageTOFValue(tofMeasurements, SENSOR_TOF_RIGHT));
 
 }
 
@@ -663,6 +667,35 @@ void stateScanningExit()
   stateScanningExitRoutine(ledState, flags);
 }
 
+// ================================================================
+// ===                       TURNING STATE                      ===
+// ================================================================
+
+
+// The "s_scanning" state
+void stateTurningEnter()
+{
+  stateTurningEnterRoutine(ledState, flags);
+}
+
+void stateTurning()
+{
+  readAll();
+
+  stateTurningRoutine( imuMeasurements, 
+                        motorSpeeds, 
+                        motorSpeedMeasurements,
+                        btnState, 
+                        ledState, 
+                        flags);
+
+  updateAll();
+}
+
+void stateTurningExit()
+{
+  stateTurningExitRoutine(ledState, flags);
+}
 
 
 
