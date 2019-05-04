@@ -74,6 +74,12 @@ void stateTurningRoutine(float imuMeasurements[SENSOR_IMU_MEASUREMENT_DIMENSIONS
   // Start TURNING bottle
   if (is_state == is_start)
   {
+    #ifdef SERIAL_ENABLE
+    Serial.print("start turn ");
+    if (flags[FLAG_TURN_RIGHT]) Serial.print("right");
+    else Serial.print("left");
+    #endif
+
     is_state = is_turn_start;
   }
 
@@ -103,7 +109,7 @@ void stateTurningRoutine(float imuMeasurements[SENSOR_IMU_MEASUREMENT_DIMENSIONS
         }
     }
     #ifdef SERIAL_ENABLE
-    Serial.print("desired angle: ");
+    Serial.print(" desired angle: ");
     Serial.print(zDesired);
     #endif
     writeMotorSpeed(motorSpeeds, ACTUATOR_MOTOR_RIGHT, ACTUATOR_MOTOR_RIGHT_DIRECTION_PIN, ACTUATOR_MOTOR_RIGHT_SPEED_PIN);
@@ -118,7 +124,7 @@ void stateTurningRoutine(float imuMeasurements[SENSOR_IMU_MEASUREMENT_DIMENSIONS
     z = getMedianIMUZOrientationValue(imuMeasurements);
 
     #ifdef SERIAL_ENABLE
-    Serial.print("Angle: ");
+    Serial.print(" angle: ");
     Serial.print(z);
     #endif
 

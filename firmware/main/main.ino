@@ -695,7 +695,7 @@ void stateScanningExit()
 // ================================================================
 
 
-// The "s_scanning" state
+// The "s_turning" state
 void stateTurningEnter()
 {
   stateTurningEnterRoutine(ledState, flags);

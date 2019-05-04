@@ -51,7 +51,7 @@ State checkStateTransition( State currentState,
     // Wait for the START button to be pressed to start the robot
     if (btnState[BTN_START])
     {
-      return s_wander;
+      return s_following;
     }
   }
 
@@ -94,6 +94,23 @@ State checkStateTransition( State currentState,
       flags[FLAG_BOTTLE_DETECTED] = 0;
 
       return s_swallowing;
+    }
+  }
+
+
+  /**
+   * Current state "s_following"
+   */
+  else if (currentState == s_following)
+  {
+    // Exit following state and enter turn state to follow corner
+    if (flags[FLAG_FOLLOWING_CORNER_DETECTED] && stateTransitionAllowed)
+    {
+      flags[FLAG_FOLLOWING_CORNER_DETECTED] = 0;
+
+      flags[FLAG_TURN_RIGHT] = !flags[FLAG_FOLLOWING_RIGHT_SIDE];
+
+      return s_turning;
     }
   }
 

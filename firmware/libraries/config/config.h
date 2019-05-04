@@ -18,7 +18,7 @@
 
 /* Debugging */
 #define DEBUG_ENABLE 1
-#define MANUAL_STATE_TRANSITION_ENABLE 1
+//#define MANUAL_STATE_TRANSITION_ENABLE 1
 
 /* Serial communication */
 #define SERIAL_ENABLE 1
@@ -111,13 +111,16 @@
 #define ACTUATOR_SERVO_BAR_LEFT_OPEN 110
 #define ACTUATOR_SERVO_BAR_LEFT_CLOSED 170
 
-#define FLAG_COUNT 6
+#define FLAG_COUNT 9
 #define FLAG_ENABLE_ESTIMATOR 0
 #define FLAG_ELEMENT_DETECTED 1
 #define FLAG_BOTTLE_DETECTED 2
 #define FLAG_WALL_DETECTED 3
 #define FLAG_NOTHING_DETECTED 4
-#define FLAG_TURN_RIGHT 5
+#define FLAG_CORNER_DETECTED 5
+#define FLAG_FOLLOWING_RIGHT_SIDE 6
+#define FLAG_FOLLOWING_CORNER_DETECTED 7
+#define FLAG_TURN_RIGHT 8
 
 
 /* PINs */
@@ -194,8 +197,6 @@ enum State
   s_swallowing,           //7 Turning to have bottle in front and swallowing bottle
   s_turning,              //8 Turns a given angle
 
-  s_turn,
-  s_wait,
   s_panic             // Panic state, when something unexpected happened
 };
 
@@ -214,11 +215,10 @@ enum State
 #define FOLLOWING_WALL_MAX_SPEED 0.6f
 #define FOLLOWING_WALL_MIN_SPEED 0.1f
 #define FOLLOWING_WALL_MAX_SPEED_ANGLE 90.f
-//#define WALL_CALIBRATING_SPEED 0.4f
-//#define WALL_CALIBRATION_THRESHOLD 10
+#define FOLLOWING_WALL_APPROACHING_FACTOR 0.6f
 #define FOLLOWING_WALL_RIGHT 0
 #define FOLLOWING_WALL_LEFT 0
-#define FOLLOWING_WALL_CORNER_DETECTED_THRESHOLD 200
+#define FOLLOWING_WALL_CORNER_DETECTED_THRESHOLD 150
 #define FOLLOWING_WALL_DESIRED_WALL_DISTANCE 80
 #define FOLLOWING_WALL_REACTIVITY 0.002
 #define FOLLOWING_WALL_STOPPING_THRESHOLD 0.001
