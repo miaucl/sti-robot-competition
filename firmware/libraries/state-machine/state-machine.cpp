@@ -51,7 +51,7 @@ State checkStateTransition( State currentState,
     // Wait for the START button to be pressed to start the robot
     if (btnState[BTN_START])
     {
-      return s_turning;
+      return s_swallowing;
     }
   }
 
@@ -125,6 +125,25 @@ State checkStateTransition( State currentState,
       flags[FLAG_TURN_FINISHED] = 0;
 
       return s_following;
+    }
+  }
+
+  /**
+   * Current state "s_swallowing"
+   */
+  else if (currentState == s_swallowing)
+  {
+    // Exit swallow state and enter return state to go back
+    if (flags[FLAG_SWALLOWED_BOTTLE] && stateTransitionAllowed)
+    {
+      return;
+    }
+    // Exit turning state and enter following state to follow wall
+    else if (flags[FLAG_SWALLOW_TIMEOUT] && stateTransitionAllowed)
+    {
+      flags[FLAG_SWALLOW_TIMEOUT] = 0;
+
+      return s_scanning;
     }
   }
 

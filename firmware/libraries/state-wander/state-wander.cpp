@@ -26,6 +26,8 @@ static long turn_timestamp = 0;
 static boolean ignoreRight = false;
 static boolean ignoreLeft = false;
 
+static long offsetTimestamp = 0;
+
 
 void stateWanderEnterRoutine( boolean ledState[LED_COUNT],
                               boolean flags[FLAG_COUNT])
@@ -99,6 +101,9 @@ void stateWanderRoutine(int proximityMeasurements[SENSOR_PROXIMITY_COUNT][SENSOR
     writeMotorSpeed(motorSpeeds, ACTUATOR_MOTOR_RIGHT, ACTUATOR_MOTOR_RIGHT_DIRECTION_PIN, ACTUATOR_MOTOR_RIGHT_SPEED_PIN);
     writeMotorSpeed(motorSpeeds, ACTUATOR_MOTOR_LEFT, ACTUATOR_MOTOR_LEFT_DIRECTION_PIN, ACTUATOR_MOTOR_LEFT_SPEED_PIN);
 
+    // timestamp for offset
+    offsetTimestamp = millis();
+
     // Set moving flag
     is_state = is_forward;
   }
@@ -162,6 +167,9 @@ void stateWanderRoutine(int proximityMeasurements[SENSOR_PROXIMITY_COUNT][SENSOR
       writeMotorSpeed(motorSpeeds, ACTUATOR_MOTOR_LEFT, ACTUATOR_MOTOR_LEFT_DIRECTION_PIN, ACTUATOR_MOTOR_LEFT_SPEED_PIN);
 
       is_state = is_stopping;
+    }
+    else if (millis() - offsetTimestamp < WANDER_OFFSET)
+    {
     }
     else if (proximityRight > WANDER_PROXIMITY_THRESHOLD ||
         proximityForwardRight > WANDER_PROXIMITY_THRESHOLD ||
@@ -284,9 +292,9 @@ void stateWanderRoutine(int proximityMeasurements[SENSOR_PROXIMITY_COUNT][SENSOR
     }
   }
 
-
-
-  Serial.println("");
+  #ifdef SERIAL_ENABLE
+  Serial.println();
+  #endif
 }
 
 

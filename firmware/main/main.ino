@@ -274,6 +274,7 @@ void loop()
   updateEstimator(dt);
 
   // Feedback
+  ledState[LED_ALIVE] = generatePing();
   writeLeds(ledState);
 
 
@@ -390,7 +391,8 @@ void stateCalibrationEnter()
   delay(200);
   setEstimatorAngleOffset();
   
-  ledState[LED_SYSTEM] = HIGH; writeLeds(ledState);
+  ledState[LED_SYSTEM] = HIGH; 
+  writeLeds(ledState);
 }
 
 void stateCalibration()

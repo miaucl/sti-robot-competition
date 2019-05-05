@@ -28,22 +28,36 @@ static int maxProx = 0;
 static int maxProxVal = 0;
 static int beforeProxVal = 0;
 static long scanningTimestamp = 0;
-static int bottleInRobot = 0;
-static boolean zOverflow = false;
 static float zStart = 0;
 static float zLast = 0;
 
+static long turnOffsetTimestamp = 0;
+
+static boolean bottleDetected = 0;
+
 static int scanMaxProxRight = 0;
-static int scanMaxAngleRight = 0;
+static int scanMaxProxAngleRight = 0;
 static int scanMaxProxForwardRight = 0;
-static int scanMaxAngleForwardRight = 0;
+static int scanMaxProxAngleForwardRight = 0;
 static int scanMaxProxForward = 0;
-static int scanMaxAngleForward = 0;
+static int scanMaxProxAngleForward = 0;
 static int scanMaxProxLeft = 0;
-static int scanMaxAngleLeft = 0;
+static int scanMaxProxAngleLeft = 0;
 static int scanMaxProxForwardLeft = 0;
-static int scanMaxAngleForwardLeft = 0;
-static int count = 0;
+static int scanMaxProxAngleForwardLeft = 0;
+static int proxCount = 0;
+
+static int proxTargetAngle = 0;
+
+static int scanMinTOFRight = SCANNING_TOF_INF;
+static int scanMinTOFAngleRight = 0;
+static int scanMinTOFCenter = SCANNING_TOF_INF;
+static int scanMinTOFAngleCenter = 0;
+static int scanMinTOFLeft = SCANNING_TOF_INF;
+static int scanMinTOFAngleLeft = 0;
+static int tofCount = 0;
+
+static int tofTargetAngle = 0;
 
 static int targetAngle = 0;
 
@@ -61,22 +75,29 @@ void stateScanningEnterRoutine( boolean ledState[LED_COUNT],
   scanningTimestamp = 0;
 
   scanMaxProxRight = 0;
-  scanMaxAngleRight = 0;
+  scanMaxProxAngleRight = 0;
   scanMaxProxForwardRight = 0;
-  scanMaxAngleForwardRight = 0;
+  scanMaxProxAngleForwardRight = 0;
   scanMaxProxForward = 0;
-  scanMaxAngleForward = 0;
+  scanMaxProxAngleForward = 0;
   scanMaxProxLeft = 0;
-  scanMaxAngleLeft = 0;
+  scanMaxProxAngleLeft = 0;
   scanMaxProxForwardLeft = 0;
-  scanMaxAngleForwardLeft = 0;
-  count = 0;
+  scanMaxProxAngleForwardLeft = 0;
+  proxCount = 0;
+  proxTargetAngle = 0;
 
+  scanMinTOFRight = SCANNING_TOF_INF;
+  scanMinTOFAngleRight = 0;
+  scanMinTOFCenter = SCANNING_TOF_INF;
+  scanMinTOFAngleCenter = 0;
+  scanMinTOFLeft = SCANNING_TOF_INF;
+  scanMinTOFAngleLeft = 0;
+  tofCount = 0;
+  tofTargetAngle = 0;
+
+  bottleDetected = 0;
   targetAngle = 0;
-
-  zOverflow = false;
-
-  bottleInRobot = 0;
 }
 
 void stateScanningRoutine(int proximityMeasurements[SENSOR_PROXIMITY_COUNT][SENSOR_PROXIMITY_MEASUREMENT_COUNT],
@@ -124,6 +145,8 @@ void stateScanningRoutine(int proximityMeasurements[SENSOR_PROXIMITY_COUNT][SENS
     Serial.print("start");
     #endif
 
+    turnOffsetTimestamp = millis();
+
     is_state = is_turn_start;
   }
 
@@ -135,7 +158,6 @@ void stateScanningRoutine(int proximityMeasurements[SENSOR_PROXIMITY_COUNT][SENS
     writeMotorSpeed(motorSpeeds, ACTUATOR_MOTOR_RIGHT, ACTUATOR_MOTOR_RIGHT_DIRECTION_PIN, ACTUATOR_MOTOR_RIGHT_SPEED_PIN);
     writeMotorSpeed(motorSpeeds, ACTUATOR_MOTOR_LEFT, ACTUATOR_MOTOR_LEFT_DIRECTION_PIN, ACTUATOR_MOTOR_LEFT_SPEED_PIN);
 
-    zOverflow = false;
     zStart = getMedianIMUZOrientationValue(imuMeasurements);
     zLast = zStart;
     is_state = is_turning;
@@ -162,11 +184,11 @@ void stateScanningRoutine(int proximityMeasurements[SENSOR_PROXIMITY_COUNT][SENS
       int proxForwardLeft = getAverageProximityValue(proximityMeasurements, SENSOR_PROXIMITY_FORWARD_LEFT) - proximityAmbientMeasurements[SENSOR_PROXIMITY_FORWARD_LEFT];
       int proxLeft = getAverageProximityValue(proximityMeasurements, SENSOR_PROXIMITY_LEFT) - proximityAmbientMeasurements[SENSOR_PROXIMITY_LEFT];
 
-      // Overflow
-      if (fabsf(z - zLast) > 180.f)
-      {
-        zOverflow = true;
-      }
+
+      int tofRight = getFilteredAverageTOFValue(tofMeasurements, SENSOR_TOF_RIGHT);
+      int tofCenter = getFilteredAverageTOFValue(tofMeasurements, SENSOR_TOF_CENTER);
+      int tofLeft = getFilteredAverageTOFValue(tofMeasurements, SENSOR_TOF_LEFT);
+
 
       // Serial.print(z);
       // Serial.print(",");
@@ -179,113 +201,209 @@ void stateScanningRoutine(int proximityMeasurements[SENSOR_PROXIMITY_COUNT][SENS
       // Serial.print(proxForwardLeft);
       // Serial.print(",");
       // Serial.print(proxLeft);
-      // // Serial.print(",");
-      // Serial.print(getFilteredAverageTOFValue(tofMeasurements, SENSOR_TOF_CENTER));
+      // Serial.print(",");
+      // Serial.print(tofRight);
+      // Serial.print(",");
+      // Serial.print(tofCenter);
+      // Serial.print(",");
+      // Serial.print(tofLeft);
       // Serial.println();
 
       if (scanMaxProxRight < proxRight && SCANNING_PROX_THRESHOLD < proxRight)
       {
         scanMaxProxRight = proxRight;
-        scanMaxAngleRight = z + SENSOR_PROXIMITY_RIGHT_OFFSET;
-        if (scanMaxAngleRight > 180) scanMaxAngleRight -= 360;
-        if (scanMaxAngleRight < -180) scanMaxAngleRight += 360;
+        scanMaxProxAngleRight = z + SENSOR_PROXIMITY_RIGHT_OFFSET;
+        if (scanMaxProxAngleRight > 180) scanMaxProxAngleRight -= 360;
+        if (scanMaxProxAngleRight < -180) scanMaxProxAngleRight += 360;
       }
       if (scanMaxProxForwardRight < proxForwardRight && SCANNING_PROX_THRESHOLD < proxForwardRight)
       {
         scanMaxProxForwardRight = proxForwardRight;
-        scanMaxAngleForwardRight = z + SENSOR_PROXIMITY_FORWARD_RIGHT_OFFSET;
-        if (scanMaxAngleForwardRight > 180) scanMaxAngleForwardRight -= 360;
-        if (scanMaxAngleForwardRight < -180) scanMaxAngleForwardRight += 360;
+        scanMaxProxAngleForwardRight = z + SENSOR_PROXIMITY_FORWARD_RIGHT_OFFSET;
+        if (scanMaxProxAngleForwardRight > 180) scanMaxProxAngleForwardRight -= 360;
+        if (scanMaxProxAngleForwardRight < -180) scanMaxProxAngleForwardRight += 360;
       }
       if (scanMaxProxForward < proxForward && SCANNING_PROX_THRESHOLD < proxForward)
       {
         scanMaxProxForward = proxForward;
-        scanMaxAngleForward = z + SENSOR_PROXIMITY_FORWARD_OFFSET;
-        if (scanMaxAngleForward > 180) scanMaxAngleForward -= 360;
-        if (scanMaxAngleForward < -180) scanMaxAngleForward += 360;
+        scanMaxProxAngleForward = z + SENSOR_PROXIMITY_FORWARD_OFFSET;
+        if (scanMaxProxAngleForward > 180) scanMaxProxAngleForward -= 360;
+        if (scanMaxProxAngleForward < -180) scanMaxProxAngleForward += 360;
       }
       if (scanMaxProxForwardLeft < proxForwardLeft && SCANNING_PROX_THRESHOLD < proxForwardLeft)
       {
         scanMaxProxForwardLeft = proxForwardLeft;
-        scanMaxAngleForwardLeft = z + SENSOR_PROXIMITY_FORWARD_LEFT_OFFSET;
-        if (scanMaxAngleForwardLeft > 180) scanMaxAngleForwardLeft -= 360;
-        if (scanMaxAngleForwardLeft < -180) scanMaxAngleForwardLeft += 360;
+        scanMaxProxAngleForwardLeft = z + SENSOR_PROXIMITY_FORWARD_LEFT_OFFSET;
+        if (scanMaxProxAngleForwardLeft > 180) scanMaxProxAngleForwardLeft -= 360;
+        if (scanMaxProxAngleForwardLeft < -180) scanMaxProxAngleForwardLeft += 360;
       }
       if (scanMaxProxLeft < proxLeft && SCANNING_PROX_THRESHOLD < proxLeft)
       {
         scanMaxProxLeft = proxLeft;
-        scanMaxAngleLeft = z + SENSOR_PROXIMITY_LEFT_OFFSET;
-        if (scanMaxAngleLeft > 180) scanMaxAngleLeft -= 360;
-        if (scanMaxAngleLeft < -180) scanMaxAngleLeft += 360;
+        scanMaxProxAngleLeft = z + SENSOR_PROXIMITY_LEFT_OFFSET;
+        if (scanMaxProxAngleLeft > 180) scanMaxProxAngleLeft -= 360;
+        if (scanMaxProxAngleLeft < -180) scanMaxProxAngleLeft += 360;
       }
 
+
+      if (scanMinTOFRight > tofRight && SCANNING_TOF_THRESHOLD > tofRight && 0 < tofRight)
+      {
+        scanMinTOFRight = tofRight;
+        scanMinTOFAngleRight = z;
+        if (scanMinTOFAngleRight > 180) scanMinTOFAngleRight -= 360;
+        if (scanMinTOFAngleRight < -180) scanMinTOFAngleRight += 360;
+      }
+      if (scanMinTOFCenter > tofCenter && SCANNING_TOF_THRESHOLD > tofCenter && 0 < tofCenter)
+      {
+        scanMinTOFCenter = tofCenter;
+        scanMinTOFAngleCenter = z;
+        if (scanMinTOFAngleCenter > 180) scanMinTOFAngleCenter -= 360;
+        if (scanMinTOFAngleCenter < -180) scanMinTOFAngleCenter += 360;
+      }
+      if (scanMinTOFLeft > tofLeft && SCANNING_TOF_THRESHOLD > tofLeft && 0 < tofLeft)
+      {
+        scanMinTOFLeft = tofLeft;
+        scanMinTOFAngleLeft = z;
+        if (scanMinTOFAngleLeft > 180) scanMinTOFAngleLeft -= 360;
+        if (scanMinTOFAngleLeft < -180) scanMinTOFAngleLeft += 360;
+      }
 
       zLast = z;
 
       // One revolution
-      if (zOverflow && z > zStart)
+      if (fabsf(z - zStart) < SCANNING_TURN_ERROR && millis() - turnOffsetTimestamp > SCANNING_TURN_OFFSET)
       {
         #ifdef SERIAL_ENABLE
-        Serial.print("\tMAX Right: ");
+        Serial.print("\tPROX:");
+        Serial.print(" MAX R ");
         Serial.print(scanMaxProxRight);
         Serial.print(",");
-        Serial.print(scanMaxAngleRight);
-        Serial.print("\tMAX Forward Right: ");
+        Serial.print(scanMaxProxAngleRight);
+        Serial.print(" MAX FR ");
         Serial.print(scanMaxProxLeft);
         Serial.print(",");
-        Serial.print(scanMaxAngleForwardRight);
-        Serial.print("\tMAX Forward: ");
+        Serial.print(scanMaxProxAngleForwardRight);
+        Serial.print(" MAX F ");
         Serial.print(scanMaxProxForward);
         Serial.print(",");
-        Serial.print(scanMaxAngleForward);
-        Serial.print("\tMAX Forward Left: ");
+        Serial.print(scanMaxProxAngleForward);
+        Serial.print(" MAX FL ");
         Serial.print(scanMaxProxForwardLeft);
         Serial.print(",");
-        Serial.print(scanMaxAngleForwardLeft);
-        Serial.print("\tMAX Left: ");
+        Serial.print(scanMaxProxAngleForwardLeft);
+        Serial.print(" MAX L ");
         Serial.print(scanMaxProxLeft);
         Serial.print(",");
-        Serial.print(scanMaxAngleLeft);
-        Serial.print("\t\t\t");
+        Serial.print(scanMaxProxAngleLeft);
+        Serial.print("\tTOF:");
+        Serial.print(" MIN R ");
+        Serial.print(scanMinTOFRight);
+        Serial.print(",");
+        Serial.print(scanMinTOFAngleRight);
+        Serial.print(" MIN C ");
+        Serial.print(scanMinTOFCenter);
+        Serial.print(",");
+        Serial.print(scanMinTOFAngleCenter);
+        Serial.print(" MIN L ");
+        Serial.print(scanMinTOFLeft);
+        Serial.print(",");
+        Serial.print(scanMinTOFAngleLeft);
+        Serial.print("\t");
         #endif
 
-        targetAngle = 0;
+        proxTargetAngle = 0;
+        tofTargetAngle = 0;
+
         // Care for circularity of values (-pi,pi)
-        if (fabsf(targetAngle - scanMaxAngleForward) < 180 && scanMaxProxForward > 0)
+        if (fabsf(proxTargetAngle - scanMaxProxAngleForward) < 180 && scanMaxProxForward > 0)
         {
-          targetAngle += scanMaxAngleForward;
-          count++;
+          proxTargetAngle += scanMaxProxAngleForward;
+          proxCount++;
         }
-        if (fabsf(targetAngle - scanMaxAngleRight) < 180 && scanMaxProxRight > 0)
+        if (fabsf(proxTargetAngle - scanMaxProxAngleRight) < 180 && scanMaxProxRight > 0)
         {
-          targetAngle += scanMaxAngleRight;
-          count++;
+          proxTargetAngle += scanMaxProxAngleRight;
+          proxCount++;
         }
-        if (fabsf(targetAngle - scanMaxAngleForwardRight) < 180 && scanMaxProxForwardRight > 0)
+        if (fabsf(proxTargetAngle - scanMaxProxAngleForwardRight) < 180 && scanMaxProxForwardRight > 0)
         {
-          targetAngle += scanMaxAngleForwardRight;
-          count++;
+          proxTargetAngle += scanMaxProxAngleForwardRight;
+          proxCount++;
         }
-        if (fabsf(targetAngle - scanMaxAngleForward) < 180 && scanMaxProxForwardLeft > 0)
+        if (fabsf(proxTargetAngle - scanMaxProxAngleForward) < 180 && scanMaxProxForwardLeft > 0)
         {
-          targetAngle += scanMaxAngleForward;
-          count++;
+          proxTargetAngle += scanMaxProxAngleForward;
+          proxCount++;
         }
-        if (fabsf(targetAngle - scanMaxAngleLeft) < 180 && scanMaxProxLeft > 0)
+        if (fabsf(proxTargetAngle - scanMaxProxAngleLeft) < 180 && scanMaxProxLeft > 0)
         {
-          targetAngle += scanMaxAngleLeft;
-          count++;
+          proxTargetAngle += scanMaxProxAngleLeft;
+          proxCount++;
         }
 
-        if (count > 0)
+        if (fabsf(tofTargetAngle - scanMinTOFAngleRight) < 180 && scanMinTOFRight < SCANNING_TOF_INF)
         {
-          targetAngle /= count;
+          tofTargetAngle += scanMinTOFAngleRight;
+          tofCount++;
+        }
+        if (fabsf(tofTargetAngle - scanMinTOFAngleCenter) < 180 && scanMinTOFCenter < SCANNING_TOF_INF)
+        {
+          tofTargetAngle += scanMinTOFAngleCenter;
+          tofCount++;
+        }
+        if (fabsf(tofTargetAngle - scanMinTOFAngleLeft) < 180 && scanMinTOFLeft < SCANNING_TOF_INF)
+        {
+          tofTargetAngle += scanMinTOFAngleLeft;
+          tofCount++;
+        }
 
+        Serial.println();
+        Serial.print("prox: ");
+        Serial.print(proxCount);
+        Serial.print(", ");
+        Serial.print(proxTargetAngle);
+        Serial.print(" tof: ");
+        Serial.print(tofCount);
+        Serial.print(", ");
+        Serial.print(tofTargetAngle);
+
+        if (proxCount > 0)
+        {
+          proxTargetAngle /= proxCount;
+        }
+        if (tofCount > 0)
+        {
+          tofTargetAngle /= tofCount;
+        }
+
+        if (proxCount > 0 && (tofCount == 0 || fabsf(proxTargetAngle - tofTargetAngle) > 30))
+        {
           #ifdef SERIAL_ENABLE
-          Serial.print(" ==> target angle: ");
-          Serial.print(targetAngle);
+          Serial.print(" ==> bottle angle: ");
+          Serial.print(proxTargetAngle);
           #endif
 
+          bottleDetected = 1;
+          targetAngle = proxTargetAngle;
+
+          // Stop motors
+          motorSpeeds[ACTUATOR_MOTOR_RIGHT] = 0;
+          motorSpeeds[ACTUATOR_MOTOR_LEFT] = 0;
+          writeMotorSpeed(motorSpeeds, ACTUATOR_MOTOR_RIGHT, ACTUATOR_MOTOR_RIGHT_DIRECTION_PIN, ACTUATOR_MOTOR_RIGHT_SPEED_PIN);
+          writeMotorSpeed(motorSpeeds, ACTUATOR_MOTOR_LEFT, ACTUATOR_MOTOR_LEFT_DIRECTION_PIN, ACTUATOR_MOTOR_LEFT_SPEED_PIN);
+
+          is_state = is_turn_stopping;
+        }
+        else if (tofCount > 0)
+        {
+          #ifdef SERIAL_ENABLE
+          Serial.print(" ==> wall angle: ");
+          Serial.print(tofTargetAngle);
+          #endif
+
+          tofTargetAngle = tofTargetAngle + 180;
+          if (tofTargetAngle > 180) tofTargetAngle -= 360;
+          targetAngle = tofTargetAngle;
 
           // Stop motors
           motorSpeeds[ACTUATOR_MOTOR_RIGHT] = 0;
@@ -300,6 +418,12 @@ void stateScanningRoutine(int proximityMeasurements[SENSOR_PROXIMITY_COUNT][SENS
           #ifdef SERIAL_ENABLE
           Serial.print("nothing detected");
           #endif
+
+          // Stop motors
+          motorSpeeds[ACTUATOR_MOTOR_RIGHT] = 0;
+          motorSpeeds[ACTUATOR_MOTOR_LEFT] = 0;
+          writeMotorSpeed(motorSpeeds, ACTUATOR_MOTOR_RIGHT, ACTUATOR_MOTOR_RIGHT_DIRECTION_PIN, ACTUATOR_MOTOR_RIGHT_SPEED_PIN);
+          writeMotorSpeed(motorSpeeds, ACTUATOR_MOTOR_LEFT, ACTUATOR_MOTOR_LEFT_DIRECTION_PIN, ACTUATOR_MOTOR_LEFT_SPEED_PIN);
 
           flags[FLAG_NOTHING_DETECTED] = 1;
 
@@ -352,7 +476,24 @@ void stateScanningRoutine(int proximityMeasurements[SENSOR_PROXIMITY_COUNT][SENS
       writeMotorSpeed(motorSpeeds, ACTUATOR_MOTOR_RIGHT, ACTUATOR_MOTOR_RIGHT_DIRECTION_PIN, ACTUATOR_MOTOR_RIGHT_SPEED_PIN);
       writeMotorSpeed(motorSpeeds, ACTUATOR_MOTOR_LEFT, ACTUATOR_MOTOR_LEFT_DIRECTION_PIN, ACTUATOR_MOTOR_LEFT_SPEED_PIN);
 
-      is_state = is_checking;
+      if (bottleDetected)
+      {
+        #ifdef SERIAL_ENABLE
+        Serial.print(" > double-check bottle");
+        #endif
+
+        is_state = is_checking;
+      }
+      else
+      {
+        #ifdef SERIAL_ENABLE
+        Serial.print(" > obstacle detected");
+        #endif
+
+        flags[FLAG_WALL_DETECTED] = 1;
+
+        is_state = is_off;
+      }
     }
   }
   else if (is_state == is_checking)
@@ -384,7 +525,9 @@ void stateScanningRoutine(int proximityMeasurements[SENSOR_PROXIMITY_COUNT][SENS
     }
   }
 
+  #ifdef SERIAL_ENABLE
   Serial.println();
+  #endif
 }
 
 

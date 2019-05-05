@@ -33,7 +33,6 @@ void stateTurningEnterRoutine( boolean ledState[LED_COUNT],
                                 boolean flags[FLAG_COUNT])
 {
   ledState[LED_RUNNING] = HIGH;
-  flags[FLAG_TURN_DOUBLE] = 1;
 
   is_state = is_start;
 }
@@ -169,8 +168,9 @@ void stateTurningRoutine(float imuMeasurements[SENSOR_IMU_MEASUREMENT_DIMENSIONS
     }
   }
 
+  #ifdef SERIAL_ENABLE
   Serial.println();
-
+  #endif
 }
 
 

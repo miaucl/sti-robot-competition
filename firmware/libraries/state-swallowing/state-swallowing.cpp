@@ -178,19 +178,23 @@ void stateSwallowingRoutine(int proximityMeasurements[SENSOR_PROXIMITY_COUNT][SE
         #ifdef SERIAL_ENABLE
         Serial.print(" > bottle swallowed");
         #endif
+
+        flags[FLAG_SWALLOWED_BOTTLE] = 1;
+
         is_state = is_bottle_swallowed;
       }
       else
       {
+        flags[FLAG_SWALLOW_TIMEOUT] = 1;
+        
         is_state = is_off;
       }
     }
   }
 
+  #ifdef SERIAL_ENABLE
   Serial.println();
-
-
-
+  #endif
 }
 
 

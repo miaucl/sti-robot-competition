@@ -221,8 +221,9 @@ void stateFollowingRoutine(int proximityMeasurements[SENSOR_PROXIMITY_COUNT][SEN
     }
   }
 
-  Serial.println("");
-
+  #ifdef SERIAL_ENABLE
+  Serial.println();
+  #endif
 }
 
 

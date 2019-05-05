@@ -15,4 +15,14 @@ void configureLeds();
  */
 void writeLeds(boolean ledState[LED_COUNT]);
 
+/**
+ * Generate a blink with 1Hz
+ */
+boolean generateBlink();
+
+/**
+ * Generate a ping with 0.5Hz
+ */
+boolean generatePing();
+
 #endif
