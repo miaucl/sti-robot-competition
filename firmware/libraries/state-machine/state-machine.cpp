@@ -51,7 +51,7 @@ State checkStateTransition( State currentState,
     // Wait for the START button to be pressed to start the robot
     if (btnState[BTN_START])
     {
-      return s_following;
+      return s_turning;
     }
   }
 
@@ -111,6 +111,20 @@ State checkStateTransition( State currentState,
       flags[FLAG_TURN_RIGHT] = !flags[FLAG_FOLLOWING_RIGHT_SIDE];
 
       return s_turning;
+    }
+  }
+
+  /**
+   * Current state "s_turning"
+   */
+  else if (currentState == s_turning)
+  {
+    // Exit turning state and enter following state to follow wall
+    if (flags[FLAG_TURN_FINISHED] && stateTransitionAllowed)
+    {
+      flags[FLAG_TURN_FINISHED] = 0;
+
+      return s_following;
     }
   }
 

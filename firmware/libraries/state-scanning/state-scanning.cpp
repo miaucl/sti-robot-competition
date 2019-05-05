@@ -282,7 +282,7 @@ void stateScanningRoutine(int proximityMeasurements[SENSOR_PROXIMITY_COUNT][SENS
           targetAngle /= count;
 
           #ifdef SERIAL_ENABLE
-          Serial.print("target angle: ");
+          Serial.print(" ==> target angle: ");
           Serial.print(targetAngle);
           #endif
 

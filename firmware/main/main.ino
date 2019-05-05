@@ -166,6 +166,9 @@ void loop()
       digitalWrite(GLOBAL_PAUSE_LED, globalPause);
       Serial.print(">> Global Pause: ");
       Serial.println(globalPause);
+
+      stopMotor(ACTUATOR_MOTOR_RIGHT, ACTUATOR_MOTOR_RIGHT_DIRECTION_PIN, ACTUATOR_MOTOR_RIGHT_SPEED_PIN);
+      stopMotor(ACTUATOR_MOTOR_LEFT, ACTUATOR_MOTOR_LEFT_DIRECTION_PIN, ACTUATOR_MOTOR_LEFT_SPEED_PIN);
     }
   }
   // Return if globally paused
@@ -240,7 +243,7 @@ void loop()
       case s_idle: stateIdleEnter(); break;
       case s_wander: stateWanderEnter(); break;
       case s_test: stateTestEnter(); break;
-      case s_following: stateTestEnter(); break;
+      case s_following: stateFollowingEnter(); break;
       case s_swallowing: stateSwallowingEnter(); break;
       case s_scanning: stateScanningEnter(); break;
       case s_turning: stateTurningEnter(); break;
@@ -355,7 +358,9 @@ void stateCalibrationEnter()
   ledState[LED_SYSTEM] = !ledState[LED_SYSTEM]; writeLeds(ledState);
   for (int i = 0; i<ESTIMATOR_CALIBRATION_MAX; i++) // Wait for IMU to get stabelized
   {
-    delay(200); 
+    delay(100); 
+    ledState[LED_SYSTEM] = !ledState[LED_SYSTEM]; writeLeds(ledState);
+    delay(100); 
     ledState[LED_SYSTEM] = !ledState[LED_SYSTEM]; writeLeds(ledState);
     readIMU(imuMeasurements, &imuMeasurementIndex);
     float newCalibrateAngle = imuMeasurements[SENSOR_IMU_YAW][imuMeasurementIndex];

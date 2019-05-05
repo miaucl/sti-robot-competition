@@ -33,6 +33,7 @@ void stateTurningEnterRoutine( boolean ledState[LED_COUNT],
                                 boolean flags[FLAG_COUNT])
 {
   ledState[LED_RUNNING] = HIGH;
+  flags[FLAG_TURN_DOUBLE] = 1;
 
   is_state = is_start;
 }
@@ -88,26 +89,36 @@ void stateTurningRoutine(float imuMeasurements[SENSOR_IMU_MEASUREMENT_DIMENSIONS
 
     zStart = getMedianIMUZOrientationValue(imuMeasurements);
 
+    float zDelta = 0;
+
     if (flags[FLAG_TURN_RIGHT])
     {
         motorSpeeds[ACTUATOR_MOTOR_RIGHT] = -TURNING_SPEED;
         motorSpeeds[ACTUATOR_MOTOR_LEFT] = TURNING_SPEED;
-        zDesired = zStart+TURNING_ANGLE;
-        if (zDesired > 180)
-        {
-          zDesired -= 360;
-        }
+        zDelta = TURNING_ANGLE;
     }
     else
     {
         motorSpeeds[ACTUATOR_MOTOR_RIGHT] = TURNING_SPEED;
         motorSpeeds[ACTUATOR_MOTOR_LEFT] = -TURNING_SPEED;
-        zDesired = zStart-TURNING_ANGLE;
-        if (zDesired < -180)
-        {
-          zDesired += 360;
-        }
+        zDelta = -TURNING_ANGLE;
     }
+
+    if (flags[FLAG_TURN_DOUBLE])
+    {
+      zDelta *= 2;
+    }
+
+    zDesired = zStart + zDelta;
+    if (zDesired > 180)
+    {
+      zDesired -= 360;
+    }
+    if (zDesired < -180)
+    {
+      zDesired += 360;
+    }
+
     #ifdef SERIAL_ENABLE
     Serial.print(" desired angle: ");
     Serial.print(zDesired);
@@ -149,8 +160,10 @@ void stateTurningRoutine(float imuMeasurements[SENSOR_IMU_MEASUREMENT_DIMENSIONS
         fabsf(motorSpeedMeasurements[ACTUATOR_MOTOR_RIGHT]) < TURNING_STOPPING_THRESHOLD)
     {
       #ifdef SERIAL_ENABLE
-      Serial.print("stopped");
+      Serial.print(" stopped");
       #endif
+
+      flags[FLAG_TURN_FINISHED] = 1;
 
       is_state = is_off;
     }
