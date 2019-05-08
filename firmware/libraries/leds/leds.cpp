@@ -11,6 +11,7 @@ void configureLeds()
   pinMode(LED_RUNNING_PIN, OUTPUT);
   pinMode(LED_SYSTEM_PIN, OUTPUT);
   pinMode(LED_ALIVE_PIN, OUTPUT);
+  pinMode(LED_EEPROM_PIN, OUTPUT);
 }
 
 // Write the let states
@@ -19,6 +20,7 @@ void writeLeds(boolean ledState[LED_COUNT])
   digitalWrite(LED_SYSTEM_PIN, ledState[LED_SYSTEM]);
   digitalWrite(LED_RUNNING_PIN, ledState[LED_RUNNING]);
   digitalWrite(LED_ALIVE_PIN, ledState[LED_ALIVE]);
+  digitalWrite(LED_EEPROM_PIN, ledState[LED_EEPROM]);
 }
 
 
@@ -36,4 +38,13 @@ boolean generateBlink()
 boolean generatePing()
 {
   return (millis() % 3000 < 50);
+}
+
+
+/**
+ * Generate a warn with 10Hz
+ */
+boolean generateWarn()
+{
+  return (millis() % 100 < 50);
 }

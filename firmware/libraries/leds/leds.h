@@ -25,4 +25,9 @@ boolean generateBlink();
  */
 boolean generatePing();
 
+/**
+ * Generate a warn with 10Hz
+ */
+boolean generateWarn();
+
 #endif

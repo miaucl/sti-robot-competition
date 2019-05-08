@@ -558,6 +558,8 @@ void configureBtns()
 {
   pinMode(BTN_START_PIN, INPUT_PULLUP);
   pinMode(BTN_STATE_PIN, INPUT_PULLUP);
+  pinMode(BTN_EEPROM_PIN, INPUT_PULLUP);
+  pinMode(BTN_MODE_PIN, INPUT_PULLUP);
 }
 
 // Read the button states
@@ -565,4 +567,6 @@ void readBtns(boolean btnState[BTN_COUNT])
 {
   btnState[BTN_START] = (digitalRead(BTN_START_PIN) == LOW);
   btnState[BTN_STATE] = (digitalRead(BTN_STATE_PIN) == LOW);
+  btnState[BTN_EEPROM] = (digitalRead(BTN_EEPROM_PIN) == LOW);
+  btnState[BTN_MODE] = (digitalRead(BTN_MODE_PIN) == LOW);
 }

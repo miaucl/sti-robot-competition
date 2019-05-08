@@ -2,11 +2,13 @@
 #if I2CDEV_IMPLEMENTATION == I2CDEV_ARDUINO_WIRE
     #include "Wire.h"
 #endif
+#include "EEPROM.h"
 #include "config.h"
 #include "utils.h"
 #include "sensors.h"
 #include "leds.h"
 #include "actuators.h"
+#include "logger.h"
 #include "state-estimator.h"
 #include "state-machine.h"
 #include "state-following.h"
@@ -203,6 +205,12 @@ void loop()
     else if (b == '1') btnState[1] = !btnState[1];
     else if (b == '2') btnState[2] = !btnState[2];
     else if (b == '3') btnState[3] = !btnState[3];
+    else if (b == '4') btnState[4] = !btnState[4];
+    else if (b == '5') btnState[5] = !btnState[5];
+    // Virtual
+    else if (b == '6') btnState[6] = !btnState[6];
+    else if (b == '7') btnState[7] = !btnState[7];
+    else if (b == '8') btnState[8] = !btnState[8];
   }
   #endif
 
@@ -288,7 +296,6 @@ void loop()
   // Feedback
   ledState[LED_ALIVE] = generatePing();
   writeLeds(ledState);
-
 
   // Logging
   log();
@@ -845,7 +852,6 @@ void setEstimatorAngleOffset()
  */
 void updateEstimator(long dt)
 {
-
   float angle = imuMeasurements[SENSOR_IMU_YAW][imuMeasurementIndex] - estimatorAngleOffset;
   float speed = (motorSpeedMeasurements[ACTUATOR_MOTOR_RIGHT] + motorSpeedMeasurements[ACTUATOR_MOTOR_LEFT]) / 2.f;
 
@@ -861,13 +867,6 @@ void updateEstimator(long dt)
 //  Serial.print(a);
 //  Serial.print(", ");
 //  Serial.println(state);
-
-  if (flags[FLAG_LOG_ESTIMATOR])
-  {
-    // Do the logging
-  }
-
-
 }
 
 
@@ -893,6 +892,177 @@ void updateEstimator(long dt)
  */
 void log()
 {
+  // RESET EEPROM
+  if (btnState[VIRTUAL_BTN_EEPROM_RESET])
+  {
+   Serial.print("RESETTING EEPROM …");
+   resetLog();
+   Serial.println(" DONE!");
+  }
+
+  // READ EEPROM
+  if (btnState[VIRTUAL_BTN_EEPROM_READ])
+  {
+    Serial.println("READ EEPROM");
+    Serial.println("------------------------------------------------------------------------------------------");
+    Serial.println();
+    int i = 0;
+    while (i++ < EEPROM.length())
+    {
+      Serial.print(readLog());
+      Serial.print(i % 3 == 0 ? "\n" : ",");
+    }
+    Serial.println();
+    Serial.println("------------------------------------------------------------------------------------------");
+  }
+
+
+  // ENABLE / DISABLE EEPROM LOGGING
+  static boolean prevBtnState = false;
+  if (btnState[BTN_EEPROM] && !prevBtnState)
+  {
+    if (!flags[FLAG_EEPROM])
+    {
+      flags[FLAG_EEPROM] = true;
+      Serial.println("START LOGGING TO EEPROM");
+    }
+    else
+    {
+      Serial.println("STOP LOGGING TO EEPROM");
+      flags[FLAG_EEPROM] = false;
+      ledState[LED_EEPROM] = false;
+    }
+  }
+  prevBtnState = btnState[BTN_EEPROM];
+
+
+
+
+
+  // EEPROM Logging
+  // Logging position and state
+  if (flags[FLAG_EEPROM])
+  {
+    static long eepromTimestamp = millis();
+    static boolean space = true;
+
+    if (millis() - eepromTimestamp > 1000)
+    {
+      eepromTimestamp = millis();
+
+      Matrix<2> p = estimator.getPosition();
+      space = writeLog((int8_t)(p(0) * 100));
+      space = writeLog((int8_t)(p(1) * 100));
+      space = writeLog((int8_t)(state));
+    }
+
+    if (!space)
+    {
+      Serial.println("EEPROM FULL!");
+      ledState[LED_EEPROM] = generateWarn();
+    }
+    else
+    {
+      ledState[LED_EEPROM] = true;
+    }
+  }
+
+
+
+
+
+
+  // Console logging
+  // Logging all possible values
+  if (btnState[VIRTUAL_BTN_LOG])
+  {
+    static long serialTimestamp = millis();
+    if (millis() - serialTimestamp > 400)
+    {
+      serialTimestamp = millis();
+      
+      // Timestamp
+      Serial.print("TIME="); 
+      Serial.print(millis()); 
+      // Mode & State
+      Serial.print(" MODE="); 
+      Serial.print(0); 
+      Serial.print(" STATE="); 
+      Serial.print(state); 
+      // Flags, Buttons & LEDs
+      Serial.print(" FLAGS="); 
+      for (int i = 0; i<FLAG_COUNT;i++) Serial.print(flags[i]); 
+      Serial.print(" BTNS="); 
+      for (int i = 0; i<BTN_COUNT;i++) Serial.print(btnState[i]); 
+      Serial.print(" LEDS="); 
+      for (int i = 0; i<LED_COUNT;i++) Serial.print(ledState[i]); 
+
+      // Estimator
+      Matrix<3> e = estimator.getState();
+      Serial.print(" ESTIMATOR="); 
+      Serial.print(e(0));
+      Serial.print(", ");
+      Serial.print(e(1));
+      Serial.print(", ");
+      Serial.print(e(2));
+
+      // Proximity
+      Serial.print(" PROX="); 
+      Serial.print(getAverageProximityValue(proximityMeasurements, SENSOR_PROXIMITY_LEFT) - proximityAmbientMeasurements[SENSOR_PROXIMITY_LEFT]); 
+      Serial.print(", "); 
+      Serial.print(getAverageProximityValue(proximityMeasurements, SENSOR_PROXIMITY_FORWARD_LEFT) - proximityAmbientMeasurements[SENSOR_PROXIMITY_FORWARD_LEFT]); 
+      Serial.print(", "); 
+      Serial.print(getAverageProximityValue(proximityMeasurements, SENSOR_PROXIMITY_FORWARD) - proximityAmbientMeasurements[SENSOR_PROXIMITY_FORWARD]); 
+      Serial.print(", "); 
+      Serial.print(getAverageProximityValue(proximityMeasurements, SENSOR_PROXIMITY_FORWARD_RIGHT) - proximityAmbientMeasurements[SENSOR_PROXIMITY_FORWARD_RIGHT]); 
+      Serial.print(", "); 
+      Serial.print(getAverageProximityValue(proximityMeasurements, SENSOR_PROXIMITY_RIGHT) - proximityAmbientMeasurements[SENSOR_PROXIMITY_RIGHT]); 
+      Serial.print(" | "); 
+      Serial.print(getAverageProximityValue(proximityMeasurements, SENSOR_PROXIMITY_BACKWARD) - proximityAmbientMeasurements[SENSOR_PROXIMITY_BACKWARD]); 
+      Serial.print(" | "); 
+      Serial.print(getAverageProximityValue(proximityMeasurements, SENSOR_PROXIMITY_DETECT_LEFT) - proximityAmbientMeasurements[SENSOR_PROXIMITY_DETECT_RIGHT]); 
+      Serial.print(", "); 
+      Serial.print(getAverageProximityValue(proximityMeasurements, SENSOR_PROXIMITY_DETECT_RIGHT) - proximityAmbientMeasurements[SENSOR_PROXIMITY_DETECT_LEFT]); 
+      Serial.print(" | "); 
+      Serial.print(getAverageProximityValue(proximityMeasurements, SENSOR_PROXIMITY_DOWN_LEFT) - proximityAmbientMeasurements[SENSOR_PROXIMITY_DOWN_RIGHT]); 
+      Serial.print(", "); 
+      Serial.print(getAverageProximityValue(proximityMeasurements, SENSOR_PROXIMITY_DOWN_RIGHT) - proximityAmbientMeasurements[SENSOR_PROXIMITY_DOWN_LEFT]);
+      // TOF
+      Serial.print(" TOF="); 
+      Serial.print(getFilteredAverageTOFValue(tofMeasurements, SENSOR_TOF_LEFT));
+      Serial.print(", "); 
+      Serial.print(getFilteredAverageTOFValue(tofMeasurements, SENSOR_TOF_CENTER));
+      Serial.print(", "); 
+      Serial.print(getFilteredAverageTOFValue(tofMeasurements, SENSOR_TOF_RIGHT));
+      // IMU
+      Serial.print(" IMU="); 
+      Serial.print(getMedianIMUZOrientationValue(imuMeasurements));
+      // Motor
+      Serial.print(" MOTOR="); 
+      Serial.print(motorSpeeds[ACTUATOR_MOTOR_LEFT]);
+      Serial.print("/"); 
+      Serial.print(motorSpeedMeasurements[ACTUATOR_MOTOR_LEFT]);
+      Serial.print(",");      
+      Serial.print(motorSpeeds[ACTUATOR_MOTOR_RIGHT]);
+      Serial.print("/"); 
+      Serial.print(motorSpeedMeasurements[ACTUATOR_MOTOR_RIGHT]);
+      // Servo
+      Serial.print(" SERVO="); 
+      Serial.print(servoAngles[ACTUATOR_SERVO_BAR_LEFT]);
+      Serial.print(",");      
+      Serial.println(servoAngles[ACTUATOR_SERVO_BAR_RIGHT]);
+  
+
+    }
+  }
+
+
+
+
+
+
+
+  
 //  Serial.print("S: ");
 //  Serial.print(state);
 //  Serial.print("\t PROX: ");

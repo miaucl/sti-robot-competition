@@ -70,17 +70,22 @@
 #define SENSOR_IMU_YAW_DRIFT -0.0000041f // Earth Rotational Speed
 
 
-#define BTN_COUNT 4
+#define BTN_COUNT 9
 #define BTN_RESET 0
 #define BTN_START 1
 #define BTN_PAUSE 2
 #define BTN_STATE 3
+#define BTN_EEPROM 4
+#define BTN_MODE 5
+#define VIRTUAL_BTN_LOG 6
+#define VIRTUAL_BTN_EEPROM_RESET 7
+#define VIRTUAL_BTN_EEPROM_READ 8
 
 #define LED_COUNT 8
 #define LED_SYSTEM 0
 #define LED_RUNNING 1
 #define LED_ALIVE 2
-#define LED_3 3
+#define LED_EEPROM 3
 #define LED_4 4
 #define LED_5 5
 #define LED_6 6
@@ -112,7 +117,7 @@
 #define ACTUATOR_SERVO_BAR_LEFT_CLOSED 170
 
 #define FLAG_COUNT 15
-#define FLAG_LOG_ESTIMATOR 0
+#define FLAG_EEPROM 0
 #define FLAG_ELEMENT_DETECTED 1
 #define FLAG_BOTTLE_DETECTED 2
 #define FLAG_WALL_DETECTED 3
@@ -159,11 +164,13 @@
 #define BTN_START_PIN 25
 #define BTN_PAUSE_PIN 22
 #define BTN_STATE_PIN 23
+#define BTN_EEPROM_PIN 24
+#define BTN_MODE_PIN 26
 
 #define LED_SYSTEM_PIN 30
 #define LED_RUNNING_PIN 31
 #define LED_ALIVE_PIN 32
-#define LED_3_PIN 33
+#define LED_EEPROM_PIN 33
 #define LED_4_PIN 34
 #define LED_5_PIN 35
 #define LED_6_PIN 36
