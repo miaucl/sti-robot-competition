@@ -14,6 +14,8 @@
 #include "state-swallowing.h"
 #include "state-scanning.h"
 #include "state-turning.h"
+#include "state-returning.h"
+#include "state-emptying.h"
 
 /*********
  * Global values
@@ -233,6 +235,8 @@ void loop()
       case s_swallowing: stateSwallowingExit(); break;
       case s_scanning: stateScanningExit(); break;
       case s_turning: stateTurningExit(); break;
+      case s_returning: stateReturningExit(); break;
+      case s_emptying: stateEmptyingExit(); break;
     }
 
     // Enter next state
@@ -247,6 +251,8 @@ void loop()
       case s_swallowing: stateSwallowingEnter(); break;
       case s_scanning: stateScanningEnter(); break;
       case s_turning: stateTurningEnter(); break;
+      case s_returning: stateReturningEnter(); break;
+      case s_emptying: stateEmptyingEnter(); break;
     }
 
     // Set next state
@@ -256,6 +262,12 @@ void loop()
 
   // Feedback
   writeLeds(ledState);
+
+  // Update all 
+  readAll();
+
+  // Update Estimator
+  updateEstimator(dt);
 
   switch (state)
   {
@@ -268,10 +280,10 @@ void loop()
     case s_swallowing: stateSwallowing(); break;
     case s_scanning: stateScanning(); break;
     case s_turning: stateTurning(); break;
+    case s_returning: stateReturning(); break;
+    case s_emptying: stateEmptying(); break;
   }
 
-  // Update Estimator
-  updateEstimator(dt);
 
   // Feedback
   ledState[LED_ALIVE] = generatePing();
@@ -413,7 +425,6 @@ void stateCalibrationExit()
 // The "s_idle" state
 void stateIdleEnter()
 {
-  flags[FLAG_ENABLE_ESTIMATOR] = false;
   ledState[LED_SYSTEM] = false;
 }
 
@@ -439,18 +450,17 @@ void stateIdleExit()
 // ================================================================
 
 
+// !!! TO USE THE TEST STATE, DISABLE THE SERIAL READ IN THE LOOP FUNCTION !!!
+
+
 // The "s_test" state
 void stateTestEnter()
 {
   ledState[LED_RUNNING] = HIGH;
-  flags[FLAG_ENABLE_ESTIMATOR] = true;
-  setEstimatorAngleOffset();
 }
 
 void stateTest()
 {
-  readAll();
-
   static boolean raw = false;
 
   // Testing
@@ -535,16 +545,18 @@ void stateTest()
 //    Serial.println("–");
 //  }
 //
-Serial.print("Z: ");
-Serial.print(getMedianIMUZOrientationValue(imuMeasurements));
-Serial.print("\tIR: ");
-Serial.print(getAverageProximityValue(proximityMeasurements, SENSOR_PROXIMITY_FORWARD));
-Serial.print("\tTOF: ");
-Serial.print(getFilteredAverageTOFValue(tofMeasurements, SENSOR_TOF_LEFT));
-Serial.print(", ");
-Serial.print(getFilteredAverageTOFValue(tofMeasurements, SENSOR_TOF_CENTER));
-Serial.print(", ");
-Serial.println(getFilteredAverageTOFValue(tofMeasurements, SENSOR_TOF_RIGHT));
+
+
+//Serial.print("Z: ");
+//Serial.print(getMedianIMUZOrientationValue(imuMeasurements));
+//Serial.print("\tIR: ");
+//Serial.print(getAverageProximityValue(proximityMeasurements, SENSOR_PROXIMITY_FORWARD));
+//Serial.print("\tTOF: ");
+//Serial.print(getFilteredAverageTOFValue(tofMeasurements, SENSOR_TOF_LEFT));
+//Serial.print(", ");
+//Serial.print(getFilteredAverageTOFValue(tofMeasurements, SENSOR_TOF_CENTER));
+//Serial.print(", ");
+//Serial.println(getFilteredAverageTOFValue(tofMeasurements, SENSOR_TOF_RIGHT));
 
 }
 
@@ -553,7 +565,6 @@ void stateTestExit()
   ledState[LED_RUNNING] = LOW;
   stopMotor(ACTUATOR_MOTOR_RIGHT, ACTUATOR_MOTOR_RIGHT_DIRECTION_PIN, ACTUATOR_MOTOR_RIGHT_SPEED_PIN);
   stopMotor(ACTUATOR_MOTOR_LEFT, ACTUATOR_MOTOR_LEFT_DIRECTION_PIN, ACTUATOR_MOTOR_LEFT_SPEED_PIN);
-  flags[FLAG_ENABLE_ESTIMATOR] = true;
 }
 
 
@@ -570,8 +581,6 @@ void stateWanderEnter()
 
 void stateWander()
 {
-  readAll();
-
   stateWanderRoutine( proximityMeasurements, 
                       proximityAmbientMeasurements, 
                       proximityAmbientVarianceMeasurements, 
@@ -604,8 +613,6 @@ void stateFollowingEnter()
 
 void stateFollowing()
 {
-  readAll();
-
   stateFollowingRoutine(proximityMeasurements, 
                         proximityAmbientMeasurements, 
                         proximityAmbientVarianceMeasurements, 
@@ -640,13 +647,9 @@ void stateSwallowingEnter()
 
 void stateSwallowing()
 {
-  readAll();
-
-  stateSwallowingRoutine( proximityMeasurements, 
+   stateSwallowingRoutine( proximityMeasurements, 
                           proximityAmbientMeasurements, 
                           proximityAmbientVarianceMeasurements, 
-                          tofMeasurements, 
-                          imuMeasurements, 
                           motorSpeeds, 
                           motorSpeedMeasurements, 
                           servoAngles, 
@@ -676,8 +679,6 @@ void stateScanningEnter()
 
 void stateScanning()
 {
-  readAll();
-
   stateScanningRoutine( proximityMeasurements, 
                         proximityAmbientMeasurements, 
                         proximityAmbientVarianceMeasurements, 
@@ -710,14 +711,12 @@ void stateTurningEnter()
 
 void stateTurning()
 {
-  readAll();
-
-  stateTurningRoutine( imuMeasurements, 
-                        motorSpeeds, 
-                        motorSpeedMeasurements,
-                        btnState, 
-                        ledState, 
-                        flags);
+  stateTurningRoutine(imuMeasurements, 
+                      motorSpeeds, 
+                      motorSpeedMeasurements,
+                      btnState, 
+                      ledState, 
+                      flags);
 
   updateAll();
 }
@@ -728,7 +727,66 @@ void stateTurningExit()
 }
 
 
+// ================================================================
+// ===                      RETURNING STATE                     ===
+// ================================================================
 
+
+// The "s_returning" state
+void stateReturningEnter()
+{
+  stateReturningEnterRoutine(ledState, flags);
+}
+
+void stateReturning()
+{
+  stateReturningRoutine(proximityMeasurements, 
+                        proximityAmbientMeasurements, 
+                        proximityAmbientVarianceMeasurements, 
+                        estimator.getAngle(),
+                        motorSpeeds, 
+                        motorSpeedMeasurements,
+                        btnState, 
+                        ledState, 
+                        flags);
+
+  updateAll();
+}
+
+void stateReturningExit()
+{
+  stateReturningExitRoutine(ledState, flags);
+}
+
+
+
+// ================================================================
+// ===                        EMPTYING STATE                    ===
+// ================================================================
+
+
+// The "s_emptying" state
+void stateEmptyingEnter()
+{
+  stateEmptyingEnterRoutine(ledState, flags);
+}
+
+void stateEmptying()
+{
+   stateEmptyingRoutine(motorSpeeds, 
+                        motorSpeedMeasurements, 
+                        servoAngles, 
+                        btnState, 
+                        ledState, 
+                        flags);
+
+  updateAll();
+}
+
+void stateEmptyingExit()
+{
+  stateEmptyingExitRoutine(ledState, flags);
+}
 
 /**
  * Read all
@@ -787,22 +845,47 @@ void setEstimatorAngleOffset()
  */
 void updateEstimator(long dt)
 {
-  if (flags[FLAG_ENABLE_ESTIMATOR])
+
+  float angle = imuMeasurements[SENSOR_IMU_YAW][imuMeasurementIndex] - estimatorAngleOffset;
+  float speed = (motorSpeedMeasurements[ACTUATOR_MOTOR_RIGHT] + motorSpeedMeasurements[ACTUATOR_MOTOR_LEFT]) / 2.f;
+
+  estimator.step(speed, -angle, dt / 1000.f);
+
+  Matrix<2> p = estimator.getPosition();
+  float a = estimator.getAngle();
+
+//  Serial.print(p(0));
+//  Serial.print(", ");
+//  Serial.print(p(1));
+//  Serial.print(", ");    
+//  Serial.print(a);
+//  Serial.print(", ");
+//  Serial.println(state);
+
+  if (flags[FLAG_LOG_ESTIMATOR])
   {
-    float angle = imuMeasurements[SENSOR_IMU_YAW][imuMeasurementIndex] - estimatorAngleOffset;
-    float speed = (motorSpeedMeasurements[ACTUATOR_MOTOR_RIGHT] + motorSpeedMeasurements[ACTUATOR_MOTOR_LEFT]) / 2.f;
-
-    estimator.step(speed, -angle, dt / 1000.f);
-
-    Matrix<2> p = estimator.getPosition();
-
-//    Serial.print(p(0));
-//    Serial.print(", ");
-//    Serial.print(p(1));
-//    Serial.print(", ");
-//    Serial.println(state);
+    // Do the logging
   }
+
+
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 /**

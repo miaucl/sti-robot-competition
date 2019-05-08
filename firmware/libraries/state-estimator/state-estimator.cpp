@@ -36,7 +36,7 @@ Matrix<3> StateEstimator::getState()
   Matrix<3> s;
   s(0) = this->_x(0);
   s(1) = this->_x(1);
-  s(2) = this->_x(2);
+  s(2) = this->getAngle();
 
   return s;
 }
@@ -52,5 +52,8 @@ Matrix<2> StateEstimator::getPosition()
 
 float StateEstimator::getAngle()
 {
-  return this->_x(2);
+  float a = this->_x(2);
+  if (a > 180) a -= 360;
+  if (a < -180) a += 360;
+  return a;
 }

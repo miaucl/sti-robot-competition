@@ -51,7 +51,7 @@ State checkStateTransition( State currentState,
     // Wait for the START button to be pressed to start the robot
     if (btnState[BTN_START])
     {
-      return s_swallowing;
+      return s_returning;
     }
   }
 
@@ -123,8 +123,9 @@ State checkStateTransition( State currentState,
     if (flags[FLAG_TURN_FINISHED] && stateTransitionAllowed)
     {
       flags[FLAG_TURN_FINISHED] = 0;
+      //return s_wander;
 
-      return s_following;
+      //return s_following;
     }
   }
 
@@ -136,7 +137,7 @@ State checkStateTransition( State currentState,
     // Exit swallow state and enter return state to go back
     if (flags[FLAG_SWALLOWED_BOTTLE] && stateTransitionAllowed)
     {
-      return;
+      return s_returning;
     }
     // Exit turning state and enter following state to follow wall
     else if (flags[FLAG_SWALLOW_TIMEOUT] && stateTransitionAllowed)
@@ -146,6 +147,36 @@ State checkStateTransition( State currentState,
       return s_scanning;
     }
   }
+
+  /**
+   * Current state "s_returning"
+   */
+  else if (currentState == s_returning)
+  {
+    // Exit swallow state and enter return state to go back
+    if (flags[FLAG_RETURNED] && stateTransitionAllowed)
+    {
+      flags[FLAG_RETURNED] = 0;
+      return s_emptying;
+    }
+  }
+
+
+  /**
+   * Current state "s_returning"
+   */
+  else if (currentState == s_emptying)
+  {
+    // Exit swallow state and enter return state to go back
+    if (flags[FLAG_EMPTYIED_BOTTLE] && stateTransitionAllowed)
+    {
+      flags[FLAG_EMPTYIED_BOTTLE] = 0;
+
+      flags[FLAG_TURN_DOUBLE] = 1;
+      return s_turning;
+    }
+  }
+
 
 
 

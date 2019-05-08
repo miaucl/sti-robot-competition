@@ -29,3 +29,11 @@ int sort_asc(const void *cmp1, const void *cmp2)
   // A simpler, probably faster way:
   //return b - a;
 }
+
+int wrapPI(float a)
+{
+  while (a > 180.f) a -= 360.f;
+  while (a < -180.f) a += 360.f;
+
+  return a;
+}

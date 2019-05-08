@@ -12,9 +12,15 @@
 int sort_desc(const void *cmp1, const void *cmp2);
 
 /**
-* Sort compare criteria (DESC)
+ * Sort compare criteria (DESC)
  * qsort requires you to create a sort function
  */
 int sort_asc(const void *cmp1, const void *cmp2);
+
+/**
+ * Wrap to PI
+ * Wraps a value to interval [-PI,PI]
+ */
+int wrapPI(float a);
 
 #endif

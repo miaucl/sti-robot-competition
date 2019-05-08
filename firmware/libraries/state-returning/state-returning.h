@@ -1,33 +1,33 @@
 /*
-  state-swallowing.h - Following state methods
+  state-returning.h - Returns to the recycling zone
   Created by Cyrill Lippuner, 2019.
 */
-#ifndef STATE_SWALLOWING_h
-#define STATE_SWALLOWING_h
+#ifndef STATE_RETURNING_h
+#define STATE_RETURNING_h
 
 /**
- * Enter the state swallowing
+ * Enter the state <state>
  */
-void stateSwallowingEnterRoutine( boolean ledState[LED_COUNT],
-                                  boolean flags[FLAG_COUNT]);
+void stateReturningEnterRoutine(boolean ledState[LED_COUNT],
+                                boolean flags[FLAG_COUNT]);
 
 /**
- * Run the state swallowing
+ * Run the state <state>
  */
-void stateSwallowingRoutine(int proximityMeasurements[SENSOR_PROXIMITY_COUNT][SENSOR_PROXIMITY_MEASUREMENT_COUNT],
+void stateReturningRoutine( int proximityMeasurements[SENSOR_PROXIMITY_COUNT][SENSOR_PROXIMITY_MEASUREMENT_COUNT],
                             int proximityAmbientMeasurements[SENSOR_PROXIMITY_COUNT],
                             int proximityAmbientVarianceMeasurements[SENSOR_PROXIMITY_COUNT],
+                            float estimatedAngle,
                             double motorSpeeds[ACTUATOR_MOTOR_COUNT],
                             double motorSpeedMeasurements[ACTUATOR_MOTOR_COUNT],
-                            int servoAngles[ACTUATOR_SERVO_COUNT],
                             boolean btnState[BTN_COUNT],
                             boolean ledState[LED_COUNT],
                             boolean flags[FLAG_COUNT]);
 
 /**
- * Exit the state swallowing
+ * Exit the state <state>
  */
-void stateSwallowingExitRoutine(boolean ledState[LED_COUNT],
+void stateReturningExitRoutine( boolean ledState[LED_COUNT],
                                 boolean flags[FLAG_COUNT]);
 
 

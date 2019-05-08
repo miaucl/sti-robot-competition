@@ -3,13 +3,12 @@
   Created by Cyrill Lippuner, 2019.
 */
 
-#include "Arduino.h"
-#include "config.h"
-#include "math.h"
+
 
 #include "Arduino.h"
 #include "math.h"
 #include "config.h"
+#include "utils.h"
 #include "sensors.h"
 #include "actuators.h"
 
@@ -108,15 +107,7 @@ void stateTurningRoutine(float imuMeasurements[SENSOR_IMU_MEASUREMENT_DIMENSIONS
       zDelta *= 2;
     }
 
-    zDesired = zStart + zDelta;
-    if (zDesired > 180)
-    {
-      zDesired -= 360;
-    }
-    if (zDesired < -180)
-    {
-      zDesired += 360;
-    }
+    zDesired = wrapPI(zStart + zDelta);
 
     #ifdef SERIAL_ENABLE
     Serial.print(" desired angle: ");

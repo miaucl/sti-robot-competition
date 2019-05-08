@@ -6,6 +6,7 @@
 #include "Arduino.h"
 #include "math.h"
 #include "config.h"
+#include "utils.h"
 #include "sensors.h"
 #include "actuators.h"
 
@@ -212,60 +213,44 @@ void stateScanningRoutine(int proximityMeasurements[SENSOR_PROXIMITY_COUNT][SENS
       if (scanMaxProxRight < proxRight && SCANNING_PROX_THRESHOLD < proxRight)
       {
         scanMaxProxRight = proxRight;
-        scanMaxProxAngleRight = z + SENSOR_PROXIMITY_RIGHT_OFFSET;
-        if (scanMaxProxAngleRight > 180) scanMaxProxAngleRight -= 360;
-        if (scanMaxProxAngleRight < -180) scanMaxProxAngleRight += 360;
+        scanMaxProxAngleRight = wrapPI(z + SENSOR_PROXIMITY_RIGHT_OFFSET);
       }
       if (scanMaxProxForwardRight < proxForwardRight && SCANNING_PROX_THRESHOLD < proxForwardRight)
       {
         scanMaxProxForwardRight = proxForwardRight;
-        scanMaxProxAngleForwardRight = z + SENSOR_PROXIMITY_FORWARD_RIGHT_OFFSET;
-        if (scanMaxProxAngleForwardRight > 180) scanMaxProxAngleForwardRight -= 360;
-        if (scanMaxProxAngleForwardRight < -180) scanMaxProxAngleForwardRight += 360;
+        scanMaxProxAngleForwardRight = wrapPI(z + SENSOR_PROXIMITY_FORWARD_RIGHT_OFFSET);
       }
       if (scanMaxProxForward < proxForward && SCANNING_PROX_THRESHOLD < proxForward)
       {
         scanMaxProxForward = proxForward;
-        scanMaxProxAngleForward = z + SENSOR_PROXIMITY_FORWARD_OFFSET;
-        if (scanMaxProxAngleForward > 180) scanMaxProxAngleForward -= 360;
-        if (scanMaxProxAngleForward < -180) scanMaxProxAngleForward += 360;
+        scanMaxProxAngleForward = wrapPI(z + SENSOR_PROXIMITY_FORWARD_OFFSET);
       }
       if (scanMaxProxForwardLeft < proxForwardLeft && SCANNING_PROX_THRESHOLD < proxForwardLeft)
       {
         scanMaxProxForwardLeft = proxForwardLeft;
-        scanMaxProxAngleForwardLeft = z + SENSOR_PROXIMITY_FORWARD_LEFT_OFFSET;
-        if (scanMaxProxAngleForwardLeft > 180) scanMaxProxAngleForwardLeft -= 360;
-        if (scanMaxProxAngleForwardLeft < -180) scanMaxProxAngleForwardLeft += 360;
+        scanMaxProxAngleForwardLeft = wrapPI(z + SENSOR_PROXIMITY_FORWARD_LEFT_OFFSET);
       }
       if (scanMaxProxLeft < proxLeft && SCANNING_PROX_THRESHOLD < proxLeft)
       {
         scanMaxProxLeft = proxLeft;
-        scanMaxProxAngleLeft = z + SENSOR_PROXIMITY_LEFT_OFFSET;
-        if (scanMaxProxAngleLeft > 180) scanMaxProxAngleLeft -= 360;
-        if (scanMaxProxAngleLeft < -180) scanMaxProxAngleLeft += 360;
+        scanMaxProxAngleLeft = wrapPI(z + SENSOR_PROXIMITY_LEFT_OFFSET);
       }
 
 
       if (scanMinTOFRight > tofRight && SCANNING_TOF_THRESHOLD > tofRight && 0 < tofRight)
       {
         scanMinTOFRight = tofRight;
-        scanMinTOFAngleRight = z;
-        if (scanMinTOFAngleRight > 180) scanMinTOFAngleRight -= 360;
-        if (scanMinTOFAngleRight < -180) scanMinTOFAngleRight += 360;
+        scanMinTOFAngleRight = wrapPI(z);
       }
       if (scanMinTOFCenter > tofCenter && SCANNING_TOF_THRESHOLD > tofCenter && 0 < tofCenter)
       {
         scanMinTOFCenter = tofCenter;
-        scanMinTOFAngleCenter = z;
-        if (scanMinTOFAngleCenter > 180) scanMinTOFAngleCenter -= 360;
-        if (scanMinTOFAngleCenter < -180) scanMinTOFAngleCenter += 360;
+        scanMinTOFAngleCenter = wrapPI(z);
       }
       if (scanMinTOFLeft > tofLeft && SCANNING_TOF_THRESHOLD > tofLeft && 0 < tofLeft)
       {
         scanMinTOFLeft = tofLeft;
-        scanMinTOFAngleLeft = z;
-        if (scanMinTOFAngleLeft > 180) scanMinTOFAngleLeft -= 360;
-        if (scanMinTOFAngleLeft < -180) scanMinTOFAngleLeft += 360;
+        scanMinTOFAngleLeft = wrapPI(z);
       }
 
       zLast = z;
@@ -401,8 +386,7 @@ void stateScanningRoutine(int proximityMeasurements[SENSOR_PROXIMITY_COUNT][SENS
           Serial.print(tofTargetAngle);
           #endif
 
-          tofTargetAngle = tofTargetAngle + 180;
-          if (tofTargetAngle > 180) tofTargetAngle -= 360;
+          tofTargetAngle = wrapPI(tofTargetAngle + 180);
           targetAngle = tofTargetAngle;
 
           // Stop motors

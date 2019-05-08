@@ -16,18 +16,14 @@ enum IState
   is_open,
   is_move,
   is_stopping,
-  is_bottle_swallowed,
   is_off
 };
 static IState is_state = is_start;
 static long openTimestamp = 0;
-static long swallowingTimestamp = 0;
-static int proxDetectLeft = 0;
-static int proxDetectRight = 0;
-static int bottleInRobot = 0;
+static long emptyingTimestamp = 0;
 
 
-void stateSwallowingEnterRoutine( boolean ledState[LED_COUNT],
+void stateEmptyingEnterRoutine( boolean ledState[LED_COUNT],
                                   boolean flags[FLAG_COUNT])
 {
   ledState[LED_RUNNING] = HIGH;
@@ -35,18 +31,15 @@ void stateSwallowingEnterRoutine( boolean ledState[LED_COUNT],
   is_state = is_start;
 }
 
-void stateSwallowingRoutine(int proximityMeasurements[SENSOR_PROXIMITY_COUNT][SENSOR_PROXIMITY_MEASUREMENT_COUNT],
-                            int proximityAmbientMeasurements[SENSOR_PROXIMITY_COUNT],
-                            int proximityAmbientVarianceMeasurements[SENSOR_PROXIMITY_COUNT],
-                            double motorSpeeds[ACTUATOR_MOTOR_COUNT],
-                            double motorSpeedMeasurements[ACTUATOR_MOTOR_COUNT],
-                            int servoAngles[ACTUATOR_SERVO_COUNT],
-                            boolean btnState[BTN_COUNT],
-                            boolean ledState[LED_COUNT],
-                            boolean flags[FLAG_COUNT])
+void stateEmptyingRoutine(double motorSpeeds[ACTUATOR_MOTOR_COUNT],
+                          double motorSpeedMeasurements[ACTUATOR_MOTOR_COUNT],
+                          int servoAngles[ACTUATOR_SERVO_COUNT],
+                          boolean btnState[BTN_COUNT],
+                          boolean ledState[LED_COUNT],
+                          boolean flags[FLAG_COUNT])
 {
   #ifdef SERIAL_ENABLE
-  Serial.print("swallowing(");
+  Serial.print("emptying(");
   Serial.print(is_state);
   Serial.print(")\t");
   #endif
@@ -72,7 +65,7 @@ void stateSwallowingRoutine(int proximityMeasurements[SENSOR_PROXIMITY_COUNT][SE
   }
   #endif
 
-  // Start swallowing bottle
+  // Start emptying bottle
   if (is_state == is_start)
   {
     #ifdef SERIAL_ENABLE
@@ -91,18 +84,18 @@ void stateSwallowingRoutine(int proximityMeasurements[SENSOR_PROXIMITY_COUNT][SE
   // Opening the bar
   if (is_state == is_open)
   {
-    if (millis() - openTimestamp > SWALLOWING_OPEN_DURATION)
+    if (millis() - openTimestamp > EMPTYING_OPEN_DURATION)
     {
       #ifdef SERIAL_ENABLE
       Serial.print("opened");
       #endif
 
-      motorSpeeds[ACTUATOR_MOTOR_RIGHT] = SWALLOWING_SPEED;
-      motorSpeeds[ACTUATOR_MOTOR_LEFT] = SWALLOWING_SPEED;
+      motorSpeeds[ACTUATOR_MOTOR_RIGHT] = EMPTYING_SPEED;
+      motorSpeeds[ACTUATOR_MOTOR_LEFT] = EMPTYING_SPEED;
       writeMotorSpeed(motorSpeeds, ACTUATOR_MOTOR_RIGHT, ACTUATOR_MOTOR_RIGHT_DIRECTION_PIN, ACTUATOR_MOTOR_RIGHT_SPEED_PIN);
       writeMotorSpeed(motorSpeeds, ACTUATOR_MOTOR_LEFT, ACTUATOR_MOTOR_LEFT_DIRECTION_PIN, ACTUATOR_MOTOR_LEFT_SPEED_PIN);
 
-      swallowingTimestamp = millis();
+      emptyingTimestamp = millis();
       is_state = is_move;
     }
   }
@@ -111,22 +104,11 @@ void stateSwallowingRoutine(int proximityMeasurements[SENSOR_PROXIMITY_COUNT][SE
   {
     #ifdef SERIAL_ENABLE
     Serial.print("move \ttime: ");
-    Serial.print(millis() - swallowingTimestamp);
+    Serial.print(millis() - emptyingTimestamp);
     Serial.print("\t");
     #endif
 
-    proxDetectRight = getAverageProximityValue(proximityMeasurements, SENSOR_PROXIMITY_DETECT_RIGHT) - proximityAmbientMeasurements[SENSOR_PROXIMITY_DETECT_RIGHT];
-    proxDetectLeft = getAverageProximityValue(proximityMeasurements, SENSOR_PROXIMITY_DETECT_LEFT) - proximityAmbientMeasurements[SENSOR_PROXIMITY_DETECT_LEFT];
-
-    #ifdef SERIAL_ENABLE
-    Serial.print("\tbottle detection: ");
-    Serial.print(proxDetectRight);
-    Serial.print(",");
-    Serial.print(proxDetectLeft);
-    Serial.print("\t");
-    #endif
-
-    if (millis() - swallowingTimestamp > SWALLOWING_DURATION)
+    if (millis() - emptyingTimestamp > EMPTYING_DURATION)
     {
       #ifdef SERIAL_ENABLE
       Serial.print(" > timeout");
@@ -140,27 +122,12 @@ void stateSwallowingRoutine(int proximityMeasurements[SENSOR_PROXIMITY_COUNT][SE
 
       is_state = is_stopping;
     }
-    else if (millis() - swallowingTimestamp > SWALLOWING_DURATION_OFFSET && (fabs(proxDetectRight) > SWALLOWING_BOTTLE_DETECTION_THRESHOLD || fabs(proxDetectLeft) > SWALLOWING_BOTTLE_DETECTION_THRESHOLD))
-    {
-      #ifdef SERIAL_ENABLE
-      Serial.print(" > detection");
-      #endif
-
-      // Stop motors
-      motorSpeeds[ACTUATOR_MOTOR_RIGHT] = 0;
-      motorSpeeds[ACTUATOR_MOTOR_LEFT] = 0;
-      writeMotorSpeed(motorSpeeds, ACTUATOR_MOTOR_RIGHT, ACTUATOR_MOTOR_RIGHT_DIRECTION_PIN, ACTUATOR_MOTOR_RIGHT_SPEED_PIN);
-      writeMotorSpeed(motorSpeeds, ACTUATOR_MOTOR_LEFT, ACTUATOR_MOTOR_LEFT_DIRECTION_PIN, ACTUATOR_MOTOR_LEFT_SPEED_PIN);
-
-      bottleInRobot = 1;
-      is_state = is_stopping;
-    }
   }
 
   else if (is_state == is_stopping)
   {
-    if (fabsf(motorSpeedMeasurements[ACTUATOR_MOTOR_LEFT]) < SWALLOWING_STOPPING_THRESHOLD &&
-        fabsf(motorSpeedMeasurements[ACTUATOR_MOTOR_RIGHT]) < SWALLOWING_STOPPING_THRESHOLD)
+    if (fabsf(motorSpeedMeasurements[ACTUATOR_MOTOR_LEFT]) < EMPTYING_STOPPING_THRESHOLD &&
+        fabsf(motorSpeedMeasurements[ACTUATOR_MOTOR_RIGHT]) < EMPTYING_STOPPING_THRESHOLD)
     {
       #ifdef SERIAL_ENABLE
       Serial.print("stopped and close");
@@ -171,22 +138,9 @@ void stateSwallowingRoutine(int proximityMeasurements[SENSOR_PROXIMITY_COUNT][SE
       writeServoAngle(servoAngles, ACTUATOR_SERVO_BAR_RIGHT, ACTUATOR_SERVO_BAR_RIGHT_PIN);
       writeServoAngle(servoAngles, ACTUATOR_SERVO_BAR_LEFT, ACTUATOR_SERVO_BAR_LEFT_PIN);
 
-      if(bottleInRobot == 1)
-      {
-        #ifdef SERIAL_ENABLE
-        Serial.print(" > bottle swallowed");
-        #endif
-
-        flags[FLAG_SWALLOWED_BOTTLE] = 1;
-
-        is_state = is_bottle_swallowed;
-      }
-      else
-      {
-        flags[FLAG_SWALLOW_TIMEOUT] = 1;
-
-        is_state = is_off;
-      }
+      flags[FLAG_EMPTYIED_BOTTLE] = 1;
+      flags[FLAG_SWALLOWED_BOTTLE] = 0;
+      is_state = is_off;
     }
   }
 
@@ -196,7 +150,7 @@ void stateSwallowingRoutine(int proximityMeasurements[SENSOR_PROXIMITY_COUNT][SE
 }
 
 
-void stateSwallowingExitRoutine(boolean ledState[LED_COUNT],
+void stateEmptyingExitRoutine(boolean ledState[LED_COUNT],
                                 boolean flags[FLAG_COUNT])
 {
   ledState[LED_RUNNING] = LOW;

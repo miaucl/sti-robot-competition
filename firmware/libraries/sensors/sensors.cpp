@@ -539,8 +539,7 @@ float getMedianIMUZOrientationValue(float imuMeasurements[SENSOR_IMU_MEASUREMENT
 
   // Compensate for drift
   medianMeasurement -= SENSOR_IMU_YAW_DRIFT * millis();
-  while (medianMeasurement > 180) medianMeasurement -= 360;
-  while (medianMeasurement < -180) medianMeasurement += 360;
+  medianMeasurement = wrapPI(medianMeasurement);
 
   return medianMeasurement;
 }
