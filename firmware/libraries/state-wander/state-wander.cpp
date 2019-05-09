@@ -130,8 +130,8 @@ void stateWanderRoutine(int proximityMeasurements[SENSOR_PROXIMITY_COUNT][SENSOR
 
     if (ignoreRight)
     {
-      if ((proximityRight > WANDER_PROXIMITY_THRESHOLD && proximityRight < WANDER_PROXIMITY_HIGH_THRESHOLD) ||
-      (proximityForwardRight > WANDER_PROXIMITY_THRESHOLD&& proximityForwardRight < WANDER_PROXIMITY_HIGH_THRESHOLD))
+      if ((proximityRight > WANDER_PROXIMITY_SIDE_THRESHOLD && proximityRight < WANDER_PROXIMITY_HIGH_THRESHOLD) ||
+      (proximityForwardRight > WANDER_PROXIMITY_SIDE_THRESHOLD && proximityForwardRight < WANDER_PROXIMITY_HIGH_THRESHOLD))
       {
         proximityRight = 0;
         proximityForwardRight = 0;
@@ -144,8 +144,8 @@ void stateWanderRoutine(int proximityMeasurements[SENSOR_PROXIMITY_COUNT][SENSOR
 
     if (ignoreLeft)
     {
-      if ((proximityLeft > WANDER_PROXIMITY_THRESHOLD&& proximityLeft < WANDER_PROXIMITY_HIGH_THRESHOLD) ||
-      (proximityForwardLeft > WANDER_PROXIMITY_THRESHOLD&& proximityForwardLeft < WANDER_PROXIMITY_HIGH_THRESHOLD))
+      if ((proximityLeft > WANDER_PROXIMITY_SIDE_THRESHOLD && proximityLeft < WANDER_PROXIMITY_HIGH_THRESHOLD) ||
+      (proximityForwardLeft > WANDER_PROXIMITY_SIDE_THRESHOLD && proximityForwardLeft < WANDER_PROXIMITY_HIGH_THRESHOLD))
       {
         proximityLeft = 0;
         proximityForwardLeft = 0;
@@ -171,11 +171,11 @@ void stateWanderRoutine(int proximityMeasurements[SENSOR_PROXIMITY_COUNT][SENSOR
     else if (millis() - offsetTimestamp < WANDER_OFFSET)
     {
     }
-    else if (proximityRight > WANDER_PROXIMITY_THRESHOLD ||
+    else if (proximityRight > WANDER_PROXIMITY_SIDE_THRESHOLD ||
         proximityForwardRight > WANDER_PROXIMITY_THRESHOLD ||
         proximityForward > WANDER_PROXIMITY_THRESHOLD ||
         proximityForwardLeft > WANDER_PROXIMITY_THRESHOLD ||
-        proximityLeft > WANDER_PROXIMITY_THRESHOLD)
+        proximityLeft > WANDER_PROXIMITY_SIDE_THRESHOLD)
     {
       // Stop motors
       motorSpeeds[ACTUATOR_MOTOR_RIGHT] = 0;

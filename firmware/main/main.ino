@@ -116,8 +116,8 @@ void configuration()
   configureProximity(SENSOR_PROXIMITY_BACKWARD, SENSOR_PROXIMITY_BACKWARD_PIN);
   configureProximity(SENSOR_PROXIMITY_DOWN_RIGHT, SENSOR_PROXIMITY_DOWN_RIGHT_PIN);
   configureProximity(SENSOR_PROXIMITY_DOWN_LEFT, SENSOR_PROXIMITY_DOWN_LEFT_PIN);
-  configureProximity(SENSOR_PROXIMITY_DETECT_RIGHT, SENSOR_PROXIMITY_DETECT_RIGHT_PIN);
-  configureProximity(SENSOR_PROXIMITY_DETECT_LEFT, SENSOR_PROXIMITY_DETECT_LEFT_PIN);
+  configureProximity(SENSOR_PROXIMITY_DETECT, SENSOR_PROXIMITY_DETECT_PIN);
+  configureProximity(SENSOR_PROXIMITY_DETECT2, SENSOR_PROXIMITY_DETECT2_PIN);
 
   configureTOF(SENSOR_TOF_RIGHT, SENSOR_TOF_RIGHT_TRIGGER_PIN, SENSOR_TOF_RIGHT_ECHO_PIN);
   configureTOF(SENSOR_TOF_CENTER, SENSOR_TOF_CENTER_TRIGGER_PIN, SENSOR_TOF_CENTER_ECHO_PIN);
@@ -194,7 +194,7 @@ void loop()
     // read the incoming byte:
     char b = Serial.read();
 
-    if (b == ' ') 
+    if (b == ' ')
     {
       stopMotor(ACTUATOR_MOTOR_RIGHT, ACTUATOR_MOTOR_RIGHT_DIRECTION_PIN, ACTUATOR_MOTOR_RIGHT_SPEED_PIN);
       stopMotor(ACTUATOR_MOTOR_LEFT, ACTUATOR_MOTOR_LEFT_DIRECTION_PIN, ACTUATOR_MOTOR_LEFT_SPEED_PIN);
@@ -271,7 +271,7 @@ void loop()
   // Feedback
   writeLeds(ledState);
 
-  // Update all 
+  // Update all
   readAll();
 
   // Update Estimator
@@ -356,9 +356,9 @@ void stateCalibrationEnter()
   ledState[LED_SYSTEM] = !ledState[LED_SYSTEM]; writeLeds(ledState);
   calibrateProximity(proximityAmbientMeasurements, proximityAmbientVarianceMeasurements, SENSOR_PROXIMITY_DOWN_LEFT, SENSOR_PROXIMITY_DOWN_LEFT_PIN);
   ledState[LED_SYSTEM] = !ledState[LED_SYSTEM]; writeLeds(ledState);
-  calibrateProximity(proximityAmbientMeasurements, proximityAmbientVarianceMeasurements, SENSOR_PROXIMITY_DETECT_RIGHT, SENSOR_PROXIMITY_DETECT_RIGHT_PIN);
+  calibrateProximity(proximityAmbientMeasurements, proximityAmbientVarianceMeasurements, SENSOR_PROXIMITY_DETECT, SENSOR_PROXIMITY_DETECT_PIN);
   ledState[LED_SYSTEM] = !ledState[LED_SYSTEM]; writeLeds(ledState);
-  calibrateProximity(proximityAmbientMeasurements, proximityAmbientVarianceMeasurements, SENSOR_PROXIMITY_DETECT_LEFT, SENSOR_PROXIMITY_DETECT_LEFT_PIN);
+  calibrateProximity(proximityAmbientMeasurements, proximityAmbientVarianceMeasurements, SENSOR_PROXIMITY_DETECT2, SENSOR_PROXIMITY_DETECT2_PIN);
   ledState[LED_SYSTEM] = !ledState[LED_SYSTEM]; writeLeds(ledState);
   calibrateTOF(SENSOR_TOF_RIGHT, SENSOR_TOF_RIGHT_TRIGGER_PIN, SENSOR_TOF_RIGHT_ECHO_PIN);
   ledState[LED_SYSTEM] = !ledState[LED_SYSTEM]; writeLeds(ledState);
@@ -378,9 +378,9 @@ void stateCalibrationEnter()
   ledState[LED_SYSTEM] = !ledState[LED_SYSTEM]; writeLeds(ledState);
   for (int i = 0; i<ESTIMATOR_CALIBRATION_MAX; i++) // Wait for IMU to get stabelized
   {
-    delay(100); 
+    delay(100);
     ledState[LED_SYSTEM] = !ledState[LED_SYSTEM]; writeLeds(ledState);
-    delay(100); 
+    delay(100);
     ledState[LED_SYSTEM] = !ledState[LED_SYSTEM]; writeLeds(ledState);
     readIMU(imuMeasurements, &imuMeasurementIndex);
     float newCalibrateAngle = imuMeasurements[SENSOR_IMU_YAW][imuMeasurementIndex];
@@ -409,8 +409,8 @@ void stateCalibrationEnter()
   #endif
   delay(200);
   setEstimatorAngleOffset();
-  
-  ledState[LED_SYSTEM] = HIGH; 
+
+  ledState[LED_SYSTEM] = HIGH;
   writeLeds(ledState);
 }
 
@@ -588,15 +588,15 @@ void stateWanderEnter()
 
 void stateWander()
 {
-  stateWanderRoutine( proximityMeasurements, 
-                      proximityAmbientMeasurements, 
-                      proximityAmbientVarianceMeasurements, 
-                      tofMeasurements, 
-                      imuMeasurements, 
-                      motorSpeeds, 
-                      motorSpeedMeasurements, 
-                      btnState, 
-                      ledState, 
+  stateWanderRoutine( proximityMeasurements,
+                      proximityAmbientMeasurements,
+                      proximityAmbientVarianceMeasurements,
+                      tofMeasurements,
+                      imuMeasurements,
+                      motorSpeeds,
+                      motorSpeedMeasurements,
+                      btnState,
+                      ledState,
                       flags);
 
   updateAll();
@@ -620,15 +620,15 @@ void stateFollowingEnter()
 
 void stateFollowing()
 {
-  stateFollowingRoutine(proximityMeasurements, 
-                        proximityAmbientMeasurements, 
-                        proximityAmbientVarianceMeasurements, 
-                        tofMeasurements, 
-                        imuMeasurements, 
-                        motorSpeeds, 
-                        motorSpeedMeasurements, 
-                        btnState, 
-                        ledState, 
+  stateFollowingRoutine(proximityMeasurements,
+                        proximityAmbientMeasurements,
+                        proximityAmbientVarianceMeasurements,
+                        tofMeasurements,
+                        imuMeasurements,
+                        motorSpeeds,
+                        motorSpeedMeasurements,
+                        btnState,
+                        ledState,
                         flags);
 
   updateAll();
@@ -654,14 +654,14 @@ void stateSwallowingEnter()
 
 void stateSwallowing()
 {
-   stateSwallowingRoutine( proximityMeasurements, 
-                          proximityAmbientMeasurements, 
-                          proximityAmbientVarianceMeasurements, 
-                          motorSpeeds, 
-                          motorSpeedMeasurements, 
-                          servoAngles, 
-                          btnState, 
-                          ledState, 
+   stateSwallowingRoutine( proximityMeasurements,
+                          proximityAmbientMeasurements,
+                          proximityAmbientVarianceMeasurements,
+                          motorSpeeds,
+                          motorSpeedMeasurements,
+                          servoAngles,
+                          btnState,
+                          ledState,
                           flags);
 
   updateAll();
@@ -686,15 +686,15 @@ void stateScanningEnter()
 
 void stateScanning()
 {
-  stateScanningRoutine( proximityMeasurements, 
-                        proximityAmbientMeasurements, 
-                        proximityAmbientVarianceMeasurements, 
-                        tofMeasurements, 
-                        imuMeasurements, 
-                        motorSpeeds, 
-                        motorSpeedMeasurements, 
-                        btnState, 
-                        ledState, 
+  stateScanningRoutine( proximityMeasurements,
+                        proximityAmbientMeasurements,
+                        proximityAmbientVarianceMeasurements,
+                        tofMeasurements,
+                        imuMeasurements,
+                        motorSpeeds,
+                        motorSpeedMeasurements,
+                        btnState,
+                        ledState,
                         flags);
 
   updateAll();
@@ -718,11 +718,11 @@ void stateTurningEnter()
 
 void stateTurning()
 {
-  stateTurningRoutine(imuMeasurements, 
-                      motorSpeeds, 
+  stateTurningRoutine(imuMeasurements,
+                      motorSpeeds,
                       motorSpeedMeasurements,
-                      btnState, 
-                      ledState, 
+                      btnState,
+                      ledState,
                       flags);
 
   updateAll();
@@ -747,14 +747,14 @@ void stateReturningEnter()
 
 void stateReturning()
 {
-  stateReturningRoutine(proximityMeasurements, 
-                        proximityAmbientMeasurements, 
-                        proximityAmbientVarianceMeasurements, 
+  stateReturningRoutine(proximityMeasurements,
+                        proximityAmbientMeasurements,
+                        proximityAmbientVarianceMeasurements,
                         estimator.getAngle(),
-                        motorSpeeds, 
+                        motorSpeeds,
                         motorSpeedMeasurements,
-                        btnState, 
-                        ledState, 
+                        btnState,
+                        ledState,
                         flags);
 
   updateAll();
@@ -780,11 +780,11 @@ void stateEmptyingEnter()
 
 void stateEmptying()
 {
-   stateEmptyingRoutine(motorSpeeds, 
-                        motorSpeedMeasurements, 
-                        servoAngles, 
-                        btnState, 
-                        ledState, 
+   stateEmptyingRoutine(motorSpeeds,
+                        motorSpeedMeasurements,
+                        servoAngles,
+                        btnState,
+                        ledState,
                         flags);
 
   updateAll();
@@ -810,8 +810,8 @@ void readAll()
   readProximity(proximityMeasurements, proximityMeasurementIndex, SENSOR_PROXIMITY_BACKWARD, SENSOR_PROXIMITY_BACKWARD_PIN);
   readProximity(proximityMeasurements, proximityMeasurementIndex, SENSOR_PROXIMITY_DOWN_RIGHT, SENSOR_PROXIMITY_DOWN_RIGHT_PIN);
   readProximity(proximityMeasurements, proximityMeasurementIndex, SENSOR_PROXIMITY_DOWN_LEFT, SENSOR_PROXIMITY_DOWN_LEFT_PIN);
-  readProximity(proximityMeasurements, proximityMeasurementIndex, SENSOR_PROXIMITY_DETECT_RIGHT, SENSOR_PROXIMITY_DETECT_RIGHT_PIN);
-  readProximity(proximityMeasurements, proximityMeasurementIndex, SENSOR_PROXIMITY_DETECT_LEFT, SENSOR_PROXIMITY_DETECT_LEFT_PIN);
+  readProximity(proximityMeasurements, proximityMeasurementIndex, SENSOR_PROXIMITY_DETECT, SENSOR_PROXIMITY_DETECT_PIN);
+  readProximity(proximityMeasurements, proximityMeasurementIndex, SENSOR_PROXIMITY_DETECT2, SENSOR_PROXIMITY_DETECT2_PIN);
 
   // Only look at one tof each time
   static int tofIndex = 0;
@@ -863,7 +863,7 @@ void updateEstimator(long dt)
 //  Serial.print(p(0));
 //  Serial.print(", ");
 //  Serial.print(p(1));
-//  Serial.print(", ");    
+//  Serial.print(", ");
 //  Serial.print(a);
 //  Serial.print(", ");
 //  Serial.println(state);
@@ -980,26 +980,26 @@ void log()
     if (millis() - serialTimestamp > 400)
     {
       serialTimestamp = millis();
-      
+
       // Timestamp
-      Serial.print("TIME="); 
-      Serial.print(millis()); 
+      Serial.print("TIME=");
+      Serial.print(millis());
       // Mode & State
-      Serial.print(" MODE="); 
-      Serial.print(0); 
-      Serial.print(" STATE="); 
-      Serial.print(state); 
+      Serial.print(" MODE=");
+      Serial.print(0);
+      Serial.print(" STATE=");
+      Serial.print(state);
       // Flags, Buttons & LEDs
-      Serial.print(" FLAGS="); 
-      for (int i = 0; i<FLAG_COUNT;i++) Serial.print(flags[i]); 
-      Serial.print(" BTNS="); 
-      for (int i = 0; i<BTN_COUNT;i++) Serial.print(btnState[i]); 
-      Serial.print(" LEDS="); 
-      for (int i = 0; i<LED_COUNT;i++) Serial.print(ledState[i]); 
+      Serial.print(" FLAGS=");
+      for (int i = 0; i<FLAG_COUNT;i++) Serial.print(flags[i]);
+      Serial.print(" BTNS=");
+      for (int i = 0; i<BTN_COUNT;i++) Serial.print(btnState[i]);
+      Serial.print(" LEDS=");
+      for (int i = 0; i<LED_COUNT;i++) Serial.print(ledState[i]);
 
       // Estimator
       Matrix<3> e = estimator.getState();
-      Serial.print(" ESTIMATOR="); 
+      Serial.print(" ESTIMATOR=");
       Serial.print(e(0));
       Serial.print(", ");
       Serial.print(e(1));
@@ -1007,51 +1007,51 @@ void log()
       Serial.print(e(2));
 
       // Proximity
-      Serial.print(" PROX="); 
-      Serial.print(getAverageProximityValue(proximityMeasurements, SENSOR_PROXIMITY_LEFT) - proximityAmbientMeasurements[SENSOR_PROXIMITY_LEFT]); 
-      Serial.print(", "); 
-      Serial.print(getAverageProximityValue(proximityMeasurements, SENSOR_PROXIMITY_FORWARD_LEFT) - proximityAmbientMeasurements[SENSOR_PROXIMITY_FORWARD_LEFT]); 
-      Serial.print(", "); 
-      Serial.print(getAverageProximityValue(proximityMeasurements, SENSOR_PROXIMITY_FORWARD) - proximityAmbientMeasurements[SENSOR_PROXIMITY_FORWARD]); 
-      Serial.print(", "); 
-      Serial.print(getAverageProximityValue(proximityMeasurements, SENSOR_PROXIMITY_FORWARD_RIGHT) - proximityAmbientMeasurements[SENSOR_PROXIMITY_FORWARD_RIGHT]); 
-      Serial.print(", "); 
-      Serial.print(getAverageProximityValue(proximityMeasurements, SENSOR_PROXIMITY_RIGHT) - proximityAmbientMeasurements[SENSOR_PROXIMITY_RIGHT]); 
-      Serial.print(" | "); 
-      Serial.print(getAverageProximityValue(proximityMeasurements, SENSOR_PROXIMITY_BACKWARD) - proximityAmbientMeasurements[SENSOR_PROXIMITY_BACKWARD]); 
-      Serial.print(" | "); 
-      Serial.print(getAverageProximityValue(proximityMeasurements, SENSOR_PROXIMITY_DETECT_LEFT) - proximityAmbientMeasurements[SENSOR_PROXIMITY_DETECT_RIGHT]); 
-      Serial.print(", "); 
-      Serial.print(getAverageProximityValue(proximityMeasurements, SENSOR_PROXIMITY_DETECT_RIGHT) - proximityAmbientMeasurements[SENSOR_PROXIMITY_DETECT_LEFT]); 
-      Serial.print(" | "); 
-      Serial.print(getAverageProximityValue(proximityMeasurements, SENSOR_PROXIMITY_DOWN_LEFT) - proximityAmbientMeasurements[SENSOR_PROXIMITY_DOWN_RIGHT]); 
-      Serial.print(", "); 
+      Serial.print(" PROX=");
+      Serial.print(getAverageProximityValue(proximityMeasurements, SENSOR_PROXIMITY_LEFT) - proximityAmbientMeasurements[SENSOR_PROXIMITY_LEFT]);
+      Serial.print(", ");
+      Serial.print(getAverageProximityValue(proximityMeasurements, SENSOR_PROXIMITY_FORWARD_LEFT) - proximityAmbientMeasurements[SENSOR_PROXIMITY_FORWARD_LEFT]);
+      Serial.print(", ");
+      Serial.print(getAverageProximityValue(proximityMeasurements, SENSOR_PROXIMITY_FORWARD) - proximityAmbientMeasurements[SENSOR_PROXIMITY_FORWARD]);
+      Serial.print(", ");
+      Serial.print(getAverageProximityValue(proximityMeasurements, SENSOR_PROXIMITY_FORWARD_RIGHT) - proximityAmbientMeasurements[SENSOR_PROXIMITY_FORWARD_RIGHT]);
+      Serial.print(", ");
+      Serial.print(getAverageProximityValue(proximityMeasurements, SENSOR_PROXIMITY_RIGHT) - proximityAmbientMeasurements[SENSOR_PROXIMITY_RIGHT]);
+      Serial.print(" | ");
+      Serial.print(getAverageProximityValue(proximityMeasurements, SENSOR_PROXIMITY_BACKWARD) - proximityAmbientMeasurements[SENSOR_PROXIMITY_BACKWARD]);
+      Serial.print(" | ");
+      Serial.print(getAverageProximityValue(proximityMeasurements, SENSOR_PROXIMITY_DETECT2) - proximityAmbientMeasurements[SENSOR_PROXIMITY_DETECT]);
+      Serial.print(", ");
+      Serial.print(getAverageProximityValue(proximityMeasurements, SENSOR_PROXIMITY_DETECT) - proximityAmbientMeasurements[SENSOR_PROXIMITY_DETECT2]);
+      Serial.print(" | ");
+      Serial.print(getAverageProximityValue(proximityMeasurements, SENSOR_PROXIMITY_DOWN_LEFT) - proximityAmbientMeasurements[SENSOR_PROXIMITY_DOWN_RIGHT]);
+      Serial.print(", ");
       Serial.print(getAverageProximityValue(proximityMeasurements, SENSOR_PROXIMITY_DOWN_RIGHT) - proximityAmbientMeasurements[SENSOR_PROXIMITY_DOWN_LEFT]);
       // TOF
-      Serial.print(" TOF="); 
+      Serial.print(" TOF=");
       Serial.print(getFilteredAverageTOFValue(tofMeasurements, SENSOR_TOF_LEFT));
-      Serial.print(", "); 
+      Serial.print(", ");
       Serial.print(getFilteredAverageTOFValue(tofMeasurements, SENSOR_TOF_CENTER));
-      Serial.print(", "); 
+      Serial.print(", ");
       Serial.print(getFilteredAverageTOFValue(tofMeasurements, SENSOR_TOF_RIGHT));
       // IMU
-      Serial.print(" IMU="); 
+      Serial.print(" IMU=");
       Serial.print(getMedianIMUZOrientationValue(imuMeasurements));
       // Motor
-      Serial.print(" MOTOR="); 
+      Serial.print(" MOTOR=");
       Serial.print(motorSpeeds[ACTUATOR_MOTOR_LEFT]);
-      Serial.print("/"); 
+      Serial.print("/");
       Serial.print(motorSpeedMeasurements[ACTUATOR_MOTOR_LEFT]);
-      Serial.print(",");      
+      Serial.print(",");
       Serial.print(motorSpeeds[ACTUATOR_MOTOR_RIGHT]);
-      Serial.print("/"); 
+      Serial.print("/");
       Serial.print(motorSpeedMeasurements[ACTUATOR_MOTOR_RIGHT]);
       // Servo
-      Serial.print(" SERVO="); 
+      Serial.print(" SERVO=");
       Serial.print(servoAngles[ACTUATOR_SERVO_BAR_LEFT]);
-      Serial.print(",");      
+      Serial.print(",");
       Serial.println(servoAngles[ACTUATOR_SERVO_BAR_RIGHT]);
-  
+
 
     }
   }
@@ -1062,7 +1062,7 @@ void log()
 
 
 
-  
+
 //  Serial.print("S: ");
 //  Serial.print(state);
 //  Serial.print("\t PROX: ");
@@ -1074,8 +1074,8 @@ void log()
 //  if (checkProximityThreshold(proximityMeasurements, proximityAmbientMeasurements, proximityAmbientVarianceMeasurements, SENSOR_PROXIMITY_BACKWARD)) Serial.print("B ");
 //  if (checkProximityThreshold(proximityMeasurements, proximityAmbientMeasurements, proximityAmbientVarianceMeasurements, SENSOR_PROXIMITY_DOWN_RIGHT)) Serial.print("DR ");
 //  if (checkProximityThreshold(proximityMeasurements, proximityAmbientMeasurements, proximityAmbientVarianceMeasurements, SENSOR_PROXIMITY_DOWN_LEFT)) Serial.print("DL ");
-//  if (checkProximityThreshold(proximityMeasurements, proximityAmbientMeasurements, proximityAmbientVarianceMeasurements, SENSOR_PROXIMITY_DETECT_RIGHT)) Serial.print("DTR ");
-//  if (checkProximityThreshold(proximityMeasurements, proximityAmbientMeasurements, proximityAmbientVarianceMeasurements, SENSOR_PROXIMITY_DETECT_LEFT)) Serial.print("DTL ");
+//  if (checkProximityThreshold(proximityMeasurements, proximityAmbientMeasurements, proximityAmbientVarianceMeasurements, SENSOR_PROXIMITY_DETECT)) Serial.print("DTR ");
+//  if (checkProximityThreshold(proximityMeasurements, proximityAmbientMeasurements, proximityAmbientVarianceMeasurements, SENSOR_PROXIMITY_DETECT2)) Serial.print("DTL ");
 
 //  Serial.print("\t TOF: ");
 //  if (checkTOFThreshold(tofMeasurements, SENSOR_TOF_RIGHT)) Serial.print("R ");
