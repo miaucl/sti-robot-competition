@@ -105,6 +105,7 @@
 #define ACTUATOR_MOTOR_PID_KP 100.f
 #define ACTUATOR_MOTOR_PID_KI 200.f
 #define ACTUATOR_MOTOR_PID_KD 20.f
+#define ACUTATOR_MOTOR_DISTANCE_CORRECTION 0.5f // Empirically measure
 
 #define ACTUATOR_SERVO_COUNT 2
 #define ACTUATOR_SERVO_BAR_RIGHT 0
@@ -116,7 +117,7 @@
 #define ACTUATOR_SERVO_BAR_LEFT_OPEN 110
 #define ACTUATOR_SERVO_BAR_LEFT_CLOSED 170
 
-#define FLAG_COUNT 15
+#define FLAG_COUNT 16
 #define FLAG_EEPROM 0
 #define FLAG_ELEMENT_DETECTED 1
 #define FLAG_BOTTLE_DETECTED 2
@@ -132,6 +133,7 @@
 #define FLAG_SWALLOW_TIMEOUT 12
 #define FLAG_RETURNED 13
 #define FLAG_EMPTYIED_BOTTLE 14
+#define FLAG_ON_PLATFORM 15
 
 
 /* PINs */
@@ -193,7 +195,7 @@
 #define ESTIMATOR_CALIBRATION_MAX 200
 //#define ESTIMATOR_CALIBRATION_MAX 0 // Uncomment to bypass estimator calibration
 #define ESTIMATOR_CALIBRATION_COUNTER 8
-
+#define ESTIMATOR_EEPROM_SCALING 30
 
 /**
  * The possible states of the robot can have
@@ -207,13 +209,26 @@ enum State
   s_wander,               //4 Wander around, evade obstacles with TOF and detect bottles with IR
   s_scanning,             //5 Look for bottles (obstacles) in close range
   s_following,            //6 Use to make some following on the behaviour
-  s_swallowing,           //7 Turning to have bottle in front and swallowing bottle
-  s_turning,              //8 Turns a given angle
-  s_returning,            //9 Returns to the recycling zone
-  s_emptying,             //10 Empty the robot
+  s_following_slope,      //7 Use to make some following on the behaviour
+  s_swallowing,           //8 Turning to have bottle in front and swallowing bottle
+  s_turning,              //9 Turns a given angle
+  s_returning,            //10 Returns to the recycling zone
+  s_emptying,             //11 Empty the robot
 
-  s_panic             // Panic state, when something unexpected happened
+  s_panic                 // Panic state, when something unexpected happened
 };
+
+/**
+ * The possible modes the robot can operate
+ */
+enum Mode
+{
+  m_random_navigation,     //0 Wander randomly to find bottles in the field
+  m_poi_navigation,        //1 Go to POI and search for bottles on the way there
+  m_platform,              //2 Go on the platform and search bottles there
+  m_test,                  //3 Testing mode
+};
+#define MODE_LENGTH 4
 
 // s_wander
 #define WANDER_SPEED 0.4f
@@ -238,8 +253,9 @@ enum State
 #define FOLLOWING_WALL_APPROACHING_FACTOR 0.6f
 #define FOLLOWING_WALL_RIGHT 0
 #define FOLLOWING_WALL_LEFT 0
-#define FOLLOWING_WALL_CORNER_DETECTED_THRESHOLD 150
-#define FOLLOWING_WALL_DESIRED_WALL_DISTANCE 80
+#define FOLLOWING_WALL_CORNER_DETECTED_THRESHOLD 200
+#define FOLLOWING_WALL_SLOPE_DETECTED_THRESHOLD 150
+#define FOLLOWING_WALL_DESIRED_WALL_DISTANCE 90
 #define FOLLOWING_WALL_REACTIVITY 0.002
 #define FOLLOWING_WALL_STOPPING_THRESHOLD 0.001
 
@@ -249,7 +265,7 @@ enum State
 #define SWALLOWING_OPEN_DURATION 1500
 #define SWALLOWING_DURATION_OFFSET 500
 #define SWALLOWING_DURATION 5000
-#define SWALLOWING_BOTTLE_DETECTION_THRESHOLD 80
+#define SWALLOWING_BOTTLE_DETECTION_THRESHOLD 30
 
 // s_scanning
 #define SCANNING_TURNING_SPEED 0.5f
@@ -298,6 +314,14 @@ enum State
 #define EMPTYING_DURATION_OFFSET 500
 #define EMPTYING_DURATION 3000
 
+
+// Position Corrections
+#define CORRECT_FOLLOWING_EMPTY_X (4. - 0.3)
+#define CORRECT_FOLLOWING_EMPTY_Y (0.25)
+#define CORRECT_FOLLOWING_SWALLOWED_X (0.3)
+#define CORRECT_FOLLOWING_SWALLOWED_Y (0.25)
+#define CORRECT_RETURNING_SWALLOWED_X (0.25)
+#define CORRECT_RETURNING_SWALLOWED_Y (0.25)
 
 
 #endif

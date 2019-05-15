@@ -12,8 +12,10 @@
  * Returns the same state if not
  */
 State checkStateTransition( State currentState,
+                            Mode mode,
                             long stateChangeTimestamp,
                             boolean btnState[BTN_COUNT],
-                            boolean flags[FLAG_COUNT]);
+                            boolean flags[FLAG_COUNT],
+                            StateEstimator *stateEstimator);
 
 #endif

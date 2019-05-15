@@ -29,6 +29,10 @@ class StateEstimator
      */
     void step(float speed, float angle, float dt);
     /**
+     * Correct the position with external measurements
+     */
+    void correctPos(float x, float y);
+    /**
      * Get the full state
      */
     Matrix<3> getState();

@@ -12,6 +12,7 @@
 #include "state-estimator.h"
 #include "state-machine.h"
 #include "state-following.h"
+#include "state-following-slope.h"
 #include "state-wander.h"
 #include "state-swallowing.h"
 #include "state-scanning.h"
@@ -22,6 +23,9 @@
 /*********
  * Global values
  */
+
+// Mode of the robot
+int mode = m_random_navigation;
 
 // State for the state machine
 int state = s_initialization;
@@ -215,11 +219,44 @@ void loop()
   #endif
 
 
+  // Check for mode selection (only possible in state s_initialization or s_idle)
+  if ((state == s_initialization || state == s_idle) && btnState[BTN_MODE])
+  {
+    if (++mode >= MODE_LENGTH) 
+    {
+      mode = 0;
+    }
+
+    #ifdef SERIAL_ENABLE
+    Serial.print("Mode Selection: ");
+    Serial.print(mode);
+    Serial.println("");
+    #endif
+
+    for (int i = 0; i<LED_COUNT; i++) 
+    {
+      ledState[i] = 0;
+    }
+    writeLeds(ledState);
+    delay(500);
+
+    ledState[mode] = 1;
+    writeLeds(ledState);
+    delay(1000);
+
+    for (int i = 0; i<LED_COUNT; i++) 
+    {
+      ledState[i] = 0;
+    }
+    writeLeds(ledState);
+    delay(500);
+  }
+
 
 
 
   // Check for state transition
-  State nextState = checkStateTransition(state, stateChangeTimestamp, btnState, flags);
+  State nextState = checkStateTransition(state, mode, stateChangeTimestamp, btnState, flags, &estimator);
   if (state != nextState)
   {
     #ifdef SERIAL_ENABLE
@@ -240,6 +277,7 @@ void loop()
       case s_wander: stateWanderExit(); break;
       case s_test: stateTestExit(); break;
       case s_following: stateFollowingExit(); break;
+      case s_following_slope: stateFollowingSlopeExit(); break;
       case s_swallowing: stateSwallowingExit(); break;
       case s_scanning: stateScanningExit(); break;
       case s_turning: stateTurningExit(); break;
@@ -256,6 +294,7 @@ void loop()
       case s_wander: stateWanderEnter(); break;
       case s_test: stateTestEnter(); break;
       case s_following: stateFollowingEnter(); break;
+      case s_following_slope: stateFollowingSlopeEnter(); break;
       case s_swallowing: stateSwallowingEnter(); break;
       case s_scanning: stateScanningEnter(); break;
       case s_turning: stateTurningEnter(); break;
@@ -285,6 +324,7 @@ void loop()
     case s_wander: stateWander(); break;
     case s_test: stateTest(); break;
     case s_following: stateFollowing(); break;
+    case s_following_slope: stateFollowingSlope(); break;
     case s_swallowing: stateSwallowing(); break;
     case s_scanning: stateScanning(); break;
     case s_turning: stateTurning(); break;
@@ -640,6 +680,39 @@ void stateFollowingExit()
 }
 
 
+// ================================================================
+// ===                     FOLLOWING SLOPE STATE                ===
+// ================================================================
+
+
+// The "s_following_slope" state
+void stateFollowingSlopeEnter()
+{
+  stateFollowingSlopeEnterRoutine(ledState, flags);
+}
+
+void stateFollowingSlope()
+{
+  stateFollowingSlopeRoutine( proximityMeasurements,
+                              proximityAmbientMeasurements,
+                              proximityAmbientVarianceMeasurements,
+                              tofMeasurements,
+                              imuMeasurements,
+                              motorSpeeds,
+                              motorSpeedMeasurements,
+                              btnState,
+                              ledState,
+                              flags);
+
+  updateAll();
+}
+
+void stateFollowingSlopeExit()
+{
+  stateFollowingSlopeExitRoutine(ledState, flags);
+}
+
+
 
 // ================================================================
 // ===                       SWALLOWING STATE                   ===
@@ -855,6 +928,8 @@ void updateEstimator(long dt)
   float angle = imuMeasurements[SENSOR_IMU_YAW][imuMeasurementIndex] - estimatorAngleOffset;
   float speed = (motorSpeedMeasurements[ACTUATOR_MOTOR_RIGHT] + motorSpeedMeasurements[ACTUATOR_MOTOR_LEFT]) / 2.f;
 
+  speed *= ACUTATOR_MOTOR_DISTANCE_CORRECTION;
+
   estimator.step(speed, -angle, dt / 1000.f);
 
   Matrix<2> p = estimator.getPosition();
@@ -909,7 +984,7 @@ void log()
     int i = 0;
     while (i++ < EEPROM.length())
     {
-      Serial.print(readLog());
+      Serial.print((uint8_t)readLog());
       Serial.print(i % 3 == 0 ? "\n" : ",");
     }
     Serial.println();
@@ -946,14 +1021,21 @@ void log()
     static long eepromTimestamp = millis();
     static boolean space = true;
 
+//    Matrix<2> p = estimator.getPosition();
+//    Serial.print(p(0));
+//    Serial.print(",");
+//    Serial.print(p(1));
+//    Serial.print(",");
+//    Serial.println(state);
+
     if (millis() - eepromTimestamp > 1000)
     {
       eepromTimestamp = millis();
 
       Matrix<2> p = estimator.getPosition();
-      space = writeLog((int8_t)(p(0) * 100));
-      space = writeLog((int8_t)(p(1) * 100));
-      space = writeLog((int8_t)(state));
+      space = writeLog((uint8_t)(p(0) * ESTIMATOR_EEPROM_SCALING));
+      space = writeLog((uint8_t)(p(1) * ESTIMATOR_EEPROM_SCALING));
+      space = writeLog((uint8_t)(state));
     }
 
     if (!space)
@@ -1055,50 +1137,4 @@ void log()
 
     }
   }
-
-
-
-
-
-
-
-
-//  Serial.print("S: ");
-//  Serial.print(state);
-//  Serial.print("\t PROX: ");
-//  if (checkProximityThreshold(proximityMeasurements, proximityAmbientMeasurements, proximityAmbientVarianceMeasurements, SENSOR_PROXIMITY_RIGHT)) Serial.print("R ");
-//  if (checkProximityThreshold(proximityMeasurements, proximityAmbientMeasurements, proximityAmbientVarianceMeasurements, SENSOR_PROXIMITY_FORWARD_RIGHT)) Serial.print("FR ");
-//  if (checkProximityThreshold(proximityMeasurements, proximityAmbientMeasurements, proximityAmbientVarianceMeasurements, SENSOR_PROXIMITY_FORWARD)) Serial.print("F ");
-//  if (checkProximityThreshold(proximityMeasurements, proximityAmbientMeasurements, proximityAmbientVarianceMeasurements, SENSOR_PROXIMITY_FORWARD_LEFT)) Serial.print("FL ");
-//  if (checkProximityThreshold(proximityMeasurements, proximityAmbientMeasurements, proximityAmbientVarianceMeasurements, SENSOR_PROXIMITY_LEFT)) Serial.print("L ");
-//  if (checkProximityThreshold(proximityMeasurements, proximityAmbientMeasurements, proximityAmbientVarianceMeasurements, SENSOR_PROXIMITY_BACKWARD)) Serial.print("B ");
-//  if (checkProximityThreshold(proximityMeasurements, proximityAmbientMeasurements, proximityAmbientVarianceMeasurements, SENSOR_PROXIMITY_DOWN_RIGHT)) Serial.print("DR ");
-//  if (checkProximityThreshold(proximityMeasurements, proximityAmbientMeasurements, proximityAmbientVarianceMeasurements, SENSOR_PROXIMITY_DOWN_LEFT)) Serial.print("DL ");
-//  if (checkProximityThreshold(proximityMeasurements, proximityAmbientMeasurements, proximityAmbientVarianceMeasurements, SENSOR_PROXIMITY_DETECT)) Serial.print("DTR ");
-//  if (checkProximityThreshold(proximityMeasurements, proximityAmbientMeasurements, proximityAmbientVarianceMeasurements, SENSOR_PROXIMITY_DETECT2)) Serial.print("DTL ");
-
-//  Serial.print("\t TOF: ");
-//  if (checkTOFThreshold(tofMeasurements, SENSOR_TOF_RIGHT)) Serial.print("R ");
-//  if (checkTOFThreshold(tofMeasurements, SENSOR_TOF_CENTER)) Serial.print("C ");
-//  if (checkTOFThreshold(tofMeasurements, SENSOR_TOF_LEFT)) Serial.print("L ");
-
-//  Serial.print("\t YAW: ");
-//  Serial.print(getMedianIMUZOrientationValue(imuMeasurements));
-
-//  Serial.print("\t Motor: ");
-//  Serial.print("M_R ");
-//  Serial.print(motorDirections[ACTUATOR_MOTOR_RIGHT]);
-//  Serial.print("/");
-//  Serial.print(motorSpeeds[ACTUATOR_MOTOR_RIGHT]);
-//  Serial.print(" M_L ");
-//  Serial.print(motorDirections[ACTUATOR_MOTOR_LEFT]);
-//  Serial.print("/");
-//  Serial.print(motorSpeeds[ACTUATOR_MOTOR_LEFT]);
-//
-//  Serial.print("\t Servo: ");
-//  Serial.print("S_B_R ");
-//  Serial.print(servoAngles[ACTUATOR_SERVO_BAR_RIGHT]);
-//  Serial.print(" S_B_L ");
-//  Serial.print(servoAngles[ACTUATOR_SERVO_BAR_LEFT]);
-//  Serial.println("");
 }

@@ -1,5 +1,5 @@
 /*
-  state-following.h - Following state methods
+  state-following-slope.h - Following slope state methods
   Created by Cyrill Lippuner, 2019.
 */
 
@@ -29,24 +29,29 @@ static int wallFarMotor = 0;
 static int wallFarMotorDirectionPin = 0;
 static int wallFarMotorSpeedPin = 0;
 
-void stateFollowingEnterRoutine(boolean ledState[LED_COUNT],
-                                boolean flags[FLAG_COUNT])
+static boolean slopeDone = false;
+static boolean lastProxFrontDetection = false;
+
+void stateFollowingSlopeEnterRoutine( boolean ledState[LED_COUNT],
+                                      boolean flags[FLAG_COUNT])
 {
   ledState[LED_RUNNING] = HIGH;
+  slopeDone = false;
+  lastProxFrontDetection = false;
 
   is_state = is_start;
 }
 
-void stateFollowingRoutine(int proximityMeasurements[SENSOR_PROXIMITY_COUNT][SENSOR_PROXIMITY_MEASUREMENT_COUNT],
-                          int proximityAmbientMeasurements[SENSOR_PROXIMITY_COUNT],
-                          int proximityAmbientVarianceMeasurements[SENSOR_PROXIMITY_COUNT],
-                          int tofMeasurements[SENSOR_TOF_COUNT][SENSOR_TOF_MEASUREMENT_COUNT],
-                          float imuMeasurements[SENSOR_IMU_MEASUREMENT_DIMENSIONS][SENSOR_IMU_MEASUREMENT_COUNT],
-                          double motorSpeeds[ACTUATOR_MOTOR_COUNT],
-                          double motorSpeedMeasurements[ACTUATOR_MOTOR_COUNT],
-                          boolean btnState[BTN_COUNT],
-                          boolean ledState[LED_COUNT],
-                          boolean flags[FLAG_COUNT])
+void stateFollowingSlopeRoutine(int proximityMeasurements[SENSOR_PROXIMITY_COUNT][SENSOR_PROXIMITY_MEASUREMENT_COUNT],
+                                int proximityAmbientMeasurements[SENSOR_PROXIMITY_COUNT],
+                                int proximityAmbientVarianceMeasurements[SENSOR_PROXIMITY_COUNT],
+                                int tofMeasurements[SENSOR_TOF_COUNT][SENSOR_TOF_MEASUREMENT_COUNT],
+                                float imuMeasurements[SENSOR_IMU_MEASUREMENT_DIMENSIONS][SENSOR_IMU_MEASUREMENT_COUNT],
+                                double motorSpeeds[ACTUATOR_MOTOR_COUNT],
+                                double motorSpeedMeasurements[ACTUATOR_MOTOR_COUNT],
+                                boolean btnState[BTN_COUNT],
+                                boolean ledState[LED_COUNT],
+                                boolean flags[FLAG_COUNT])
 {
   #ifdef SERIAL_ENABLE
   Serial.print("following(");
@@ -141,7 +146,7 @@ void stateFollowingRoutine(int proximityMeasurements[SENSOR_PROXIMITY_COUNT][SEN
 
   else if (is_state == is_following_wall)
   {
-    if ((getAverageProximityValue(proximityMeasurements, SENSOR_PROXIMITY_FORWARD) - proximityAmbientMeasurements[SENSOR_PROXIMITY_FORWARD]) > FOLLOWING_WALL_CORNER_DETECTED_THRESHOLD)
+    if (slopeDone && (getAverageProximityValue(proximityMeasurements, SENSOR_PROXIMITY_FORWARD) - proximityAmbientMeasurements[SENSOR_PROXIMITY_FORWARD]) > FOLLOWING_WALL_CORNER_DETECTED_THRESHOLD)
     {
       #ifdef SERIAL_ENABLE
       Serial.print("corner detected");
@@ -154,6 +159,30 @@ void stateFollowingRoutine(int proximityMeasurements[SENSOR_PROXIMITY_COUNT][SEN
       writeMotorSpeed(motorSpeeds, ACTUATOR_MOTOR_LEFT, ACTUATOR_MOTOR_LEFT_DIRECTION_PIN, ACTUATOR_MOTOR_LEFT_SPEED_PIN);
 
       is_state = is_stopping;
+    }
+    else if (!lastProxFrontDetection && (getAverageProximityValue(proximityMeasurements, SENSOR_PROXIMITY_FORWARD) - proximityAmbientMeasurements[SENSOR_PROXIMITY_FORWARD]) > FOLLOWING_WALL_SLOPE_DETECTED_THRESHOLD)
+    {
+      #ifdef SERIAL_ENABLE
+      Serial.print("entering slope detected");
+      #endif
+
+      lastProxFrontDetection = true;
+    }
+    else if (lastProxFrontDetection && !((getAverageProximityValue(proximityMeasurements, SENSOR_PROXIMITY_FORWARD) - proximityAmbientMeasurements[SENSOR_PROXIMITY_FORWARD]) > FOLLOWING_WALL_SLOPE_DETECTED_THRESHOLD))
+    {
+      #ifdef SERIAL_ENABLE
+      Serial.print("entering slope done detected");
+      #endif
+
+      lastProxFrontDetection = false;
+      slopeDone = true;
+    }
+    else if (lastProxFrontDetection)
+    {
+      #ifdef SERIAL_ENABLE
+      Serial.print("\tprox front: ");
+      Serial.print((getAverageProximityValue(proximityMeasurements, SENSOR_PROXIMITY_FORWARD) - proximityAmbientMeasurements[SENSOR_PROXIMITY_FORWARD]));
+      #endif
     }
     else
     {
@@ -227,8 +256,8 @@ void stateFollowingRoutine(int proximityMeasurements[SENSOR_PROXIMITY_COUNT][SEN
 }
 
 
-void stateFollowingExitRoutine( boolean ledState[LED_COUNT],
-                                boolean flags[FLAG_COUNT])
+void stateFollowingSlopeExitRoutine(boolean ledState[LED_COUNT],
+                                    boolean flags[FLAG_COUNT])
 {
   ledState[LED_RUNNING] = LOW;
   stopMotor(ACTUATOR_MOTOR_RIGHT, ACTUATOR_MOTOR_RIGHT_DIRECTION_PIN, ACTUATOR_MOTOR_RIGHT_SPEED_PIN);

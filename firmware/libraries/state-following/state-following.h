@@ -2,8 +2,8 @@
   state-following.h - Following state methods
   Created by Cyrill Lippuner, 2019.
 */
-#ifndef STATE_ANALYSIS_h
-#define STATE_ANALYSIS_h
+#ifndef STATE_FOLLOWING_h
+#define STATE_FOLLOWING_h
 
 /**
  * Enter the state following

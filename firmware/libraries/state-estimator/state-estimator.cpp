@@ -30,6 +30,12 @@ void StateEstimator::step(float speed, float angle, float dt)
   this->_x(2) = angle;
 }
 
+void StateEstimator::correctPos(float x, float y)
+{
+  this->_x(0) = x;
+  this->_x(1) = y;
+}
+
 
 Matrix<3> StateEstimator::getState()
 {
