@@ -156,9 +156,9 @@ void stateWanderRoutine(int proximityMeasurements[SENSOR_PROXIMITY_COUNT][SENSOR
       }
     }
 
-    if ((tofLeft < WANDER_TOF_LEFT_THRESHOLD && tofLeft > 0) ||
-        (tofCenter < WANDER_TOF_CENTER_THRESHOLD && tofCenter > 0) ||
-        (tofRight < WANDER_TOF_RIGHT_THRESHOLD && tofRight > 0))
+    if ((tofLeft < WANDER_TOF_LEFT__MOVING_THRESHOLD && tofLeft > 0) ||
+        (tofCenter < WANDER_TOF_CENTER__MOVING_THRESHOLD && tofCenter > 0) ||
+        (tofRight < WANDER_TOF_RIGHT__MOVING_THRESHOLD && tofRight > 0))
     {
       // Stop motors
       motorSpeeds[ACTUATOR_MOTOR_RIGHT] = 0;

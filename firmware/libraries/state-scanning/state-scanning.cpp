@@ -432,7 +432,7 @@ void stateScanningRoutine(int proximityMeasurements[SENSOR_PROXIMITY_COUNT][SENS
   else if (is_state == is_orienting)
   {
     float z = getMedianIMUZOrientationValue(imuMeasurements);
-    float error = z - targetAngle;
+    float error = wrapPI(z - targetAngle);
     float turningSpeed = error * SCANNING_ORIENTING_REACTIVITY;
     turningSpeed = max(turningSpeed, -SCANNING_ORIENTING_MAX_SPEED);
     turningSpeed = min(turningSpeed, SCANNING_ORIENTING_MAX_SPEED);

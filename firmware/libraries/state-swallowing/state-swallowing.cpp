@@ -24,6 +24,7 @@ static long openTimestamp = 0;
 static long swallowingTimestamp = 0;
 static int proxDetect = 0;
 static int bottleInRobot = 0;
+static int proxDetectZero = 0;
 
 
 void stateSwallowingEnterRoutine( boolean ledState[LED_COUNT],
@@ -102,6 +103,7 @@ void stateSwallowingRoutine(int proximityMeasurements[SENSOR_PROXIMITY_COUNT][SE
       writeMotorSpeed(motorSpeeds, ACTUATOR_MOTOR_LEFT, ACTUATOR_MOTOR_LEFT_DIRECTION_PIN, ACTUATOR_MOTOR_LEFT_SPEED_PIN);
 
       swallowingTimestamp = millis();
+      proxDetectZero = getAverageProximityValue(proximityMeasurements, SENSOR_PROXIMITY_DETECT) - proximityAmbientMeasurements[SENSOR_PROXIMITY_DETECT];
       is_state = is_move;
     }
   }
@@ -118,6 +120,8 @@ void stateSwallowingRoutine(int proximityMeasurements[SENSOR_PROXIMITY_COUNT][SE
 
     #ifdef SERIAL_ENABLE
     Serial.print("\tbottle detection: ");
+    Serial.print(proxDetectZero);
+    Serial.print(", ");
     Serial.print(proxDetect);
     Serial.print("\t");
     #endif
@@ -136,7 +140,7 @@ void stateSwallowingRoutine(int proximityMeasurements[SENSOR_PROXIMITY_COUNT][SE
 
       is_state = is_stopping;
     }
-    else if (millis() - swallowingTimestamp > SWALLOWING_DURATION_OFFSET && fabs(proxDetect) > SWALLOWING_BOTTLE_DETECTION_THRESHOLD)
+    else if (millis() - swallowingTimestamp > SWALLOWING_DURATION_OFFSET && fabsf(proxDetect - proxDetectZero) > SWALLOWING_BOTTLE_DETECTION_THRESHOLD)
     {
       #ifdef SERIAL_ENABLE
       Serial.print(" > detection");
