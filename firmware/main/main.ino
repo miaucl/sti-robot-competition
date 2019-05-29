@@ -20,6 +20,8 @@
 #include "state-returning.h"
 #include "state-emptying.h"
 
+
+
 /*********
  * Global values
  */
@@ -409,12 +411,14 @@ void stateCalibrationEnter()
   calibrateIMU();
   ledState[LED_SYSTEM] = !ledState[LED_SYSTEM]; writeLeds(ledState);
 
+ 
   #ifdef SERIAL_ENABLE
   Serial.println("Calibrate Estimator …");
   #endif
   readIMU(imuMeasurements, &imuMeasurementIndex);
   float calibrateAngle = 0.f;
   int calibrateCounter = 0;
+  bool calibrationSuccessful = false;
   ledState[LED_SYSTEM] = !ledState[LED_SYSTEM]; writeLeds(ledState);
   for (int i = 0; i<ESTIMATOR_CALIBRATION_MAX; i++) // Wait for IMU to get stabelized
   {
@@ -424,28 +428,48 @@ void stateCalibrationEnter()
     ledState[LED_SYSTEM] = !ledState[LED_SYSTEM]; writeLeds(ledState);
     readIMU(imuMeasurements, &imuMeasurementIndex);
     float newCalibrateAngle = imuMeasurements[SENSOR_IMU_YAW][imuMeasurementIndex];
-    if (fabsf(newCalibrateAngle) < 1) continue;
+    if (fabsf(newCalibrateAngle) < 1) 
+    {
+      #ifdef SERIAL_ENABLE
+      Serial.print("?");
+      #endif
+      continue;
+    }
 
     #ifdef SERIAL_ENABLE
     Serial.print("-");
     #endif
-    if (fabsf(newCalibrateAngle - calibrateAngle) > 0.001)
+    if (fabsf(newCalibrateAngle - calibrateAngle) > 0.04)
     {
       calibrateAngle = newCalibrateAngle;
+      calibrateCounter = 0;
     }
     else
     {
+      #ifdef SERIAL_ENABLE
+      Serial.print("o");
+      if (calibrateCounter == 0)
+      {
+        Serial.print("(");
+         Serial.print(newCalibrateAngle);
+        Serial.print(")");
+      }
+      #endif
       calibrateCounter++;
     }
 
     if (calibrateCounter > ESTIMATOR_CALIBRATION_COUNTER)
     {
+      #ifdef SERIAL_ENABLE
+      Serial.println("!");
+      #endif
+      calibrationSuccessful = true;
       break;
     }
   }
   ledState[LED_SYSTEM] = !ledState[LED_SYSTEM]; writeLeds(ledState);
   #ifdef SERIAL_ENABLE
-  Serial.println(" Done!");
+  if (!calibrationSuccessful) Serial.println("#\nFAILED!");
   #endif
   delay(200);
   setEstimatorAngleOffset();

@@ -192,6 +192,13 @@ boolean checkTOFThreshold(int tofMeasurements[SENSOR_TOF_COUNT][SENSOR_TOF_MEASU
 }
 
 
+
+
+
+
+
+
+
 /*******/
 /* IMU */
 /*******/
@@ -202,9 +209,8 @@ boolean checkTOFThreshold(int tofMeasurements[SENSOR_TOF_COUNT][SENSOR_TOF_MEASU
 MPU6050 mpu;
 
 int FifoAlive = 0; // tests if the interrupt is triggering
-int IsAlive = -20;     // counts interrupt start at -20 to get 20+ good values before assuming connected
-
 bool dmpReady = false;  // set true if DMP init was successful
+bool successfulRead = false; // whether a successful read has happened
 uint8_t mpuIntStatus;   // holds actual interrupt status byte from MPU
 uint8_t devStatus;      // return status after each device operation (0 = success, !0 = error)
 uint16_t packetSize;    // expected DMP packet size (default is 42 bytes)
@@ -245,6 +251,40 @@ void MPUMath(uint8_t fifoBuffer[64])
 }
 
 
+// ================================================================
+// ===                    MPU DMP Get Data                      ===
+// ================================================================
+void GetDMP() { // Best version I have made so far
+  static unsigned long LastGoodPacketTime;
+  mpuInterrupt = false;
+  FifoAlive = 1;
+  fifoCount = mpu.getFIFOCount();
+  //Serial.println(fifoCount);
+  // we have failed Reset and wait till next time!
+  if ((!fifoCount) || (fifoCount % packetSize))
+  {
+    // clear the buffer and start over
+    mpu.resetFIFO();
+    // Did not work
+    successfulRead = false;
+  }
+  else
+  {
+    // Get the packets until we have the latest!
+    while (fifoCount  >= packetSize)
+    {
+      // lets do the magic and get the data
+      mpu.getFIFOBytes(fifoBuffer, packetSize);
+      fifoCount -= packetSize;
+    }
+    LastGoodPacketTime = millis();
+    // Got new values
+    successfulRead = true;
+    // <<<<<<<<<<<<<<<<<<<<<<<<<<<< On success MPUMath() <<<<<<<<<<<<<<<<<<<
+    MPUMath(fifoBuffer);
+  }
+}
+
 
 void configureIMU(int i2cDataPin,
                   int i2cClockPin,
@@ -256,63 +296,71 @@ void configureIMU(int i2cDataPin,
   Serial.print(interruptPin);
   Serial.println("'");
   #endif
-  mpu.initialize();
 
-  // Verify connection
-  #ifdef SERIAL_ENABLE
-  Serial.print(">Testing imu sensor connection > ");
-  Serial.println(mpu.testConnection() ? "MPU6050 connection successful" : "MPU6050 connection failed");
-  #else
-  mpu.testConnection();
-  #endif
+  static int MPUInitCntr = 0;
+  // initialize device
+  mpu.initialize(); // same
 
-  // Load and configure the DMP
-  devStatus = mpu.dmpInitialize();
+  // load and configure the DMP
+  devStatus = mpu.dmpInitialize(); // same
 
-  // Wait a bit
-  delay(200);
-
-  /*
-  mpu.setXGyroOffset(220);
-  mpu.setYGyroOffset(76);
-  mpu.setZGyroOffset(-85);
-  mpu.setZAccelOffset(1788);
-  */
-
-  if (devStatus == 0)
-  {
-    // turn on the DMP, now that it's ready
-    #ifdef SERIAL_ENABLE
-    Serial.println(">Enabling DMP …");
-    #endif
-    mpu.setDMPEnabled(true);
-
-    // enable Arduino interrupt detection
-    #ifdef SERIAL_ENABLE
-    Serial.println(">Enabling interrupt detection (Arduino external interrupt 0) …");
-    #endif
-    attachInterrupt(digitalPinToInterrupt(interruptPin), dmpDataReady, RISING);
-    mpuIntStatus = mpu.getIntStatus();
-
-    // set our DMP Ready flag so the main loop() function knows it's okay to use it
-    dmpReady = true;
-
-    // get expected DMP packet size for later comparison
-    packetSize = mpu.dmpGetFIFOPacketSize();
-  }
-  else
+  if (devStatus != 0)
   {
     // ERROR!
     // 1 = initial memory load failed
     // 2 = DMP configuration updates failed
     // (if it's going to break, usually the code will be 1)
+
+    char * StatStr[5] { "No Error", "initial memory load failed", "DMP configuration updates failed", "3", "4"};
+
+    MPUInitCntr++;
+
     #ifdef SERIAL_ENABLE
-    Serial.print("#### DMP Initialization failed (code ");
-    Serial.print(devStatus);
+    Serial.print("MPU connection Try #'");
+    Serial.print(MPUInitCntr);
+    Serial.print("' DMP Initialization failed (code ");
+    Serial.print(StatStr[devStatus]);
     Serial.println(")");
     #endif
+
+
+    if (MPUInitCntr >= 10) return; //only try 10 times
+    delay(1000);
+    configureIMU(i2cDataPin, i2cClockPin, interruptPin); // Lets try again
+    return;
   }
+
+
+  // turn on the DMP, now that it's ready
+  #ifdef SERIAL_ENABLE
+  Serial.println(">Enabling DMP …");
+  #endif
+  mpu.setDMPEnabled(true);
+
+
+  // enable Arduino interrupt detection
+  #ifdef SERIAL_ENABLE
+  Serial.println("Enabling interrupt detection (Arduino external interrupt pin 2)..." );
+  Serial.print(">mpu.getInterruptDrive=");
+  Serial.println(mpu.getInterruptDrive());
+  #endif
+
+  // Attach the interrupt
+  attachInterrupt(digitalPinToInterrupt(interruptPin), dmpDataReady, RISING);
+  mpuIntStatus = mpu.getIntStatus(); // Same
+
+  // get expected DMP packet size for later comparison
+  packetSize = mpu.dmpGetFIFOPacketSize();
+  delay(1000); // Let it Stabalize
+  mpu.resetFIFO(); // Clear fifo buffer
+  mpu.getIntStatus();
+  mpuInterrupt = false; // wait for next interrupt
 }
+
+
+
+
+
 
 void calibrateIMU()
 {
@@ -414,32 +462,23 @@ void readIMU( float imuMeasurements[SENSOR_IMU_MEASUREMENT_DIMENSIONS][SENSOR_IM
               int *imuMeasurementIndex)
 {
   if (mpuInterrupt == 0) return;
-  //Serial.print(">");
-  static unsigned long LastGoodPacketTime;
-  mpuInterrupt = 0;
-  FifoAlive = 1;
-  fifoCount = mpu.getFIFOCount();
-  //Serial.print("f");
-  // we have failed Reset and wait till next time!
-  if ((!fifoCount) || (fifoCount % packetSize))
+
+  // Wait until values have been read
+  int tryCount = 0;
+  GetDMP();
+  while (!successfulRead)
   {
-    // clear the buffer and start over
-    mpu.resetFIFO();
-    //Serial.println("r");
-  }
-  else
-  {
-    // Get the packets until we have the latest!
-    while (fifoCount >= packetSize)
+    tryCount++;
+    delay(5); // Wait a bit
+    GetDMP();
+
+    if (tryCount > 8) // Don't get stuck here
     {
-      // lets do the magic and get the data
-      mpu.getFIFOBytes(fifoBuffer, packetSize);
-      fifoCount -= packetSize;
+      #ifdef SERIAL_ENABLE
+      Serial.println("IMU read failed…");
+      #endif
+      break;
     }
-    //Serial.print("p");
-    LastGoodPacketTime = millis();
-    MPUMath(fifoBuffer); // <<<<<<<<<<<<< On success MPUMath() <<<<<<<<<<<<<<<<<
-    //Serial.print("m");
   }
 
 
@@ -471,7 +510,7 @@ void readIMU( float imuMeasurements[SENSOR_IMU_MEASUREMENT_DIMENSIONS][SENSOR_IM
   {
     *imuMeasurementIndex = 0;
   }
-  //Serial.println(";");
+  // Serial.println(";");
 
 }
 
