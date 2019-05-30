@@ -203,35 +203,9 @@ void configureServo(int id,
   servos[id].attach(pin);
 }
 
-void resetServoAngle( int servoAngles[ACTUATOR_SERVO_COUNT],
+void setServoAngle( int servoAngles[ACTUATOR_SERVO_COUNT],
                       int id,
                       int pin)
 {
   servos[id].write(servoAngles[id]);
-  targetServoAngle[id] = servoAngles[id];
-  intermediateServoAngle[id] = servoAngles[id];
-}
-
-void writeServoAngle( int servoAngles[ACTUATOR_SERVO_COUNT],
-                      int id,
-                      int pin)
-{
-  targetServoAngle[id] = servoAngles[id];
-
-}
-
-void updateServoAngleControl( int id,
-                              int pin)
-{
-  long servoUpdateTimestamp = millis();
-
-  if ((servoUpdateTimestamp - lastServoUpdateTimestamp[id]) > SERVO_ANGLE_STEP)
-  {
-    if (targetServoAngle[id] > intermediateServoAngle[id]) intermediateServoAngle[id]++;
-    if (targetServoAngle[id] < intermediateServoAngle[id]) intermediateServoAngle[id]--;
-
-    lastServoUpdateTimestamp[id] = servoUpdateTimestamp;
-
-    servos[id].write(intermediateServoAngle[id]);
-  }
 }

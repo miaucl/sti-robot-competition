@@ -94,6 +94,8 @@ void setup() {
   #ifdef SERIAL_ENABLE
   Serial.print("ROBOT ID: ");
   Serial.println(ROBOT_ID);
+  Serial.print("Mode: ");
+  Serial.println(mode);
   Serial.println("Start Up …");
   #endif
 
@@ -143,8 +145,8 @@ void configuration()
 
   servoAngles[ACTUATOR_SERVO_BAR_RIGHT] = ACTUATOR_SERVO_BAR_RIGHT_CLOSED;
   servoAngles[ACTUATOR_SERVO_BAR_LEFT] = ACTUATOR_SERVO_BAR_LEFT_CLOSED;
-  resetServoAngle(servoAngles, ACTUATOR_SERVO_BAR_RIGHT, ACTUATOR_SERVO_BAR_RIGHT_PIN);
-  resetServoAngle(servoAngles, ACTUATOR_SERVO_BAR_LEFT, ACTUATOR_SERVO_BAR_LEFT_PIN);
+  setServoAngle(servoAngles, ACTUATOR_SERVO_BAR_RIGHT, ACTUATOR_SERVO_BAR_RIGHT_PIN);
+  setServoAngle(servoAngles, ACTUATOR_SERVO_BAR_LEFT, ACTUATOR_SERVO_BAR_LEFT_PIN);
 
   Matrix<3> x0 = {0.5,0.5,0};
   estimator.init(x0);
@@ -439,7 +441,7 @@ void stateCalibrationEnter()
     #ifdef SERIAL_ENABLE
     Serial.print("-");
     #endif
-    if (fabsf(newCalibrateAngle - calibrateAngle) > 0.04)
+    if (fabsf(newCalibrateAngle - calibrateAngle) > 0.02)
     {
       calibrateAngle = newCalibrateAngle;
       calibrateCounter = 0;
@@ -591,8 +593,8 @@ void stateTest()
       writeMotorSpeed(motorSpeeds, ACTUATOR_MOTOR_RIGHT, ACTUATOR_MOTOR_RIGHT_DIRECTION_PIN, ACTUATOR_MOTOR_RIGHT_SPEED_PIN);
       writeMotorSpeed(motorSpeeds, ACTUATOR_MOTOR_LEFT, ACTUATOR_MOTOR_LEFT_DIRECTION_PIN, ACTUATOR_MOTOR_LEFT_SPEED_PIN);
     }
-    writeServoAngle(servoAngles, ACTUATOR_SERVO_BAR_RIGHT, ACTUATOR_SERVO_BAR_RIGHT_PIN);
-    writeServoAngle(servoAngles, ACTUATOR_SERVO_BAR_LEFT, ACTUATOR_SERVO_BAR_LEFT_PIN);
+    setServoAngle(servoAngles, ACTUATOR_SERVO_BAR_RIGHT, ACTUATOR_SERVO_BAR_RIGHT_PIN);
+    setServoAngle(servoAngles, ACTUATOR_SERVO_BAR_LEFT, ACTUATOR_SERVO_BAR_LEFT_PIN);
   }
 
 
@@ -629,6 +631,11 @@ void stateTest()
 //Serial.print(", ");
 //Serial.println(getFilteredAverageTOFValue(tofMeasurements, SENSOR_TOF_RIGHT));
 
+//Serial.print(getAverageProximityValue(proximityMeasurements, SENSOR_PROXIMITY_DOWN_LEFT) - proximityAmbientMeasurements[SENSOR_PROXIMITY_DOWN_LEFT]);
+//Serial.print(", ");
+//Serial.println(getAverageProximityValue(proximityMeasurements, SENSOR_PROXIMITY_DOWN_RIGHT) - proximityAmbientMeasurements[SENSOR_PROXIMITY_DOWN_RIGHT]);
+
+//Serial.println(getAverageProximityValue(proximityMeasurements, SENSOR_PROXIMITY_DETECT) - proximityAmbientMeasurements[SENSOR_PROXIMITY_DETECT]);
 }
 
 void stateTestExit()
@@ -724,6 +731,7 @@ void stateFollowingSlope()
                               imuMeasurements,
                               motorSpeeds,
                               motorSpeedMeasurements,
+                              servoAngles,
                               btnState,
                               ledState,
                               flags);
@@ -928,8 +936,6 @@ void updateAll()
 {
   updateMotorSpeedControl(ACTUATOR_MOTOR_RIGHT, ACTUATOR_MOTOR_RIGHT_DIRECTION_PIN, ACTUATOR_MOTOR_RIGHT_SPEED_PIN, motorSpeedMeasurements);
   updateMotorSpeedControl(ACTUATOR_MOTOR_LEFT, ACTUATOR_MOTOR_LEFT_DIRECTION_PIN, ACTUATOR_MOTOR_LEFT_SPEED_PIN, motorSpeedMeasurements);
-  updateServoAngleControl(ACTUATOR_SERVO_BAR_RIGHT, ACTUATOR_SERVO_BAR_RIGHT_PIN);
-  updateServoAngleControl(ACTUATOR_SERVO_BAR_LEFT, ACTUATOR_SERVO_BAR_LEFT_PIN);
 }
 
 /**

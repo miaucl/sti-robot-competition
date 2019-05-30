@@ -91,7 +91,7 @@ State modeRandomNavigation( State currentState,
     // Wait for the START button to be pressed to start the robot
     if (btnState[BTN_START])
     {
-      return s_wander;
+      return s_swallowing;
     }
   }
 
@@ -300,7 +300,7 @@ State modePlatform( State currentState,
 
       flags[FLAG_ON_PLATFORM] = 1;
 
-      return s_test;
+      return s_turning;
     }
   }
 
@@ -310,11 +310,78 @@ State modePlatform( State currentState,
   else if (currentState == s_turning)
   {
     // Exit turning state and enter following slope state to follow wall with a ramp
-    if (flags[FLAG_TURN_FINISHED] && stateTransitionAllowed)
+    if (flags[FLAG_TURN_FINISHED] && flags[FLAG_ON_PLATFORM] && stateTransitionAllowed)
+    {
+      flags[FLAG_TURN_FINISHED] = 0;
+
+      return s_wander;
+    }
+    else if (flags[FLAG_TURN_FINISHED] && stateTransitionAllowed)
     {
       flags[FLAG_TURN_FINISHED] = 0;
 
       return s_following_slope;
+    }
+  }
+
+  /**
+   * Current state "s_wander"
+   */
+  else if (currentState == s_wander)
+  {
+    // Exit wander state and enter scanning state to check the element
+    if (flags[FLAG_ELEMENT_DETECTED] && stateTransitionAllowed)
+    {
+      flags[FLAG_ELEMENT_DETECTED] = 0;
+
+      return s_scanning;
+    }
+  }
+
+  /**
+   * Current state "s_scanning"
+   */
+  else if (currentState == s_scanning)
+  {
+    // Exit scanning state and enter wander state when nothing has been scanned
+    if (flags[FLAG_NOTHING_DETECTED] && stateTransitionAllowed)
+    {
+      flags[FLAG_NOTHING_DETECTED] = 0;
+
+      return s_wander;
+    }
+    // Exit scanning state and enter wander state when a wall has been scanned
+    else if (flags[FLAG_WALL_DETECTED] && stateTransitionAllowed)
+    {
+      flags[FLAG_WALL_DETECTED] = 0;
+
+      return s_wander;
+    }
+    // Exit scanning state and enter swallowing state when a bottle has been scanned
+    else if (flags[FLAG_BOTTLE_DETECTED] && stateTransitionAllowed)
+    {
+      flags[FLAG_BOTTLE_DETECTED] = 0;
+
+      return s_swallowing;
+    }
+  }
+
+  /**
+   * Current state "s_swallowing"
+   */
+  else if (currentState == s_swallowing)
+  {
+    // Exit swallow state and enter return on platform state to go back
+    if (flags[FLAG_SWALLOWED_BOTTLE] && stateTransitionAllowed)
+    {
+      return s_test;//s_returning_platform;
+    }
+    // Exit turning state and enter following state to follow wall
+    else if (flags[FLAG_SWALLOW_TIMEOUT] && stateTransitionAllowed)
+    {
+      flags[FLAG_SWALLOW_TIMEOUT] = 0;
+
+      return s_scanning;
     }
   }
 
@@ -369,50 +436,7 @@ State modeTest( State currentState,
     // Wait for the START button to be pressed to start the robot
     if (btnState[BTN_START])
     {
-      return s_following;
-    }
-  }
-
-
-  /**
-   * Current state "s_following"
-   */
-  else if (currentState == s_following)
-  {
-    // Exit following state and enter turn state to follow corner
-    if (flags[FLAG_FOLLOWING_CORNER_DETECTED] && stateTransitionAllowed)
-    {
-      flags[FLAG_FOLLOWING_CORNER_DETECTED] = 0;
-
-      flags[FLAG_TURN_RIGHT] = !flags[FLAG_FOLLOWING_RIGHT_SIDE];
-      flags[FLAG_TURN_DOUBLE] = 1;
-
-      if (!flags[FLAG_SWALLOWED_BOTTLE])
-      {
-        stateEstimator->correctPos(CORRECT_FOLLOWING_EMPTY_X, CORRECT_FOLLOWING_EMPTY_Y);
-      }
-      else
-      {
-        stateEstimator->correctPos(CORRECT_FOLLOWING_SWALLOWED_X, CORRECT_FOLLOWING_SWALLOWED_Y);
-      }
-
-
-      return s_turning;
-    }
-  }
-
-  /**
-   * Current state "s_turning"
-   */
-  else if (currentState == s_turning)
-  {
-    // Exit turning state and enter following slope state to follow wall with a ramp
-    if (flags[FLAG_TURN_FINISHED] && stateTransitionAllowed)
-    {
-      flags[FLAG_TURN_FINISHED] = 0;
-      flags[FLAG_SWALLOWED_BOTTLE] = !flags[FLAG_SWALLOWED_BOTTLE];
-
-      return s_following;
+      return s_test;
     }
   }
 

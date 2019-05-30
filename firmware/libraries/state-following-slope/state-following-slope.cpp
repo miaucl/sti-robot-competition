@@ -49,6 +49,7 @@ void stateFollowingSlopeRoutine(int proximityMeasurements[SENSOR_PROXIMITY_COUNT
                                 float imuMeasurements[SENSOR_IMU_MEASUREMENT_DIMENSIONS][SENSOR_IMU_MEASUREMENT_COUNT],
                                 double motorSpeeds[ACTUATOR_MOTOR_COUNT],
                                 double motorSpeedMeasurements[ACTUATOR_MOTOR_COUNT],
+                                int servoAngles[ACTUATOR_SERVO_COUNT],
                                 boolean btnState[BTN_COUNT],
                                 boolean ledState[LED_COUNT],
                                 boolean flags[FLAG_COUNT])
@@ -139,6 +140,13 @@ void stateFollowingSlopeRoutine(int proximityMeasurements[SENSOR_PROXIMITY_COUNT
       writeMotorSpeed(motorSpeeds, ACTUATOR_MOTOR_RIGHT, ACTUATOR_MOTOR_RIGHT_DIRECTION_PIN, ACTUATOR_MOTOR_RIGHT_SPEED_PIN);
       writeMotorSpeed(motorSpeeds, ACTUATOR_MOTOR_LEFT, ACTUATOR_MOTOR_LEFT_DIRECTION_PIN, ACTUATOR_MOTOR_LEFT_SPEED_PIN);
 
+      // Open
+      servoAngles[ACTUATOR_SERVO_BAR_RIGHT] = ACTUATOR_SERVO_BAR_RIGHT_OPEN;
+      servoAngles[ACTUATOR_SERVO_BAR_LEFT] = ACTUATOR_SERVO_BAR_LEFT_OPEN;
+      setServoAngle(servoAngles, ACTUATOR_SERVO_BAR_RIGHT, ACTUATOR_SERVO_BAR_RIGHT_PIN);
+      setServoAngle(servoAngles, ACTUATOR_SERVO_BAR_LEFT, ACTUATOR_SERVO_BAR_LEFT_PIN);
+
+
       // Set moving flag
       is_state = is_following_wall;
     }
@@ -176,6 +184,13 @@ void stateFollowingSlopeRoutine(int proximityMeasurements[SENSOR_PROXIMITY_COUNT
 
       lastProxFrontDetection = false;
       slopeDone = true;
+
+      // Set motor speed
+      motorSpeeds[wallNearMotor] = FOLLOWING_WALL_ENTER_SLOPE_SPEED;
+      motorSpeeds[wallFarMotor] = FOLLOWING_WALL_ENTER_SLOPE_SPEED;
+
+      writeRawMotorSpeed(motorSpeeds, wallNearMotor, wallNearMotorDirectionPin, wallNearMotorSpeedPin);
+      writeRawMotorSpeed(motorSpeeds, wallFarMotor, wallFarMotorDirectionPin, wallFarMotorSpeedPin);
     }
     else if (lastProxFrontDetection)
     {
@@ -202,7 +217,7 @@ void stateFollowingSlopeRoutine(int proximityMeasurements[SENSOR_PROXIMITY_COUNT
         directionalSpeed = FOLLOWING_WALL_MAX_SPEED;
       }
 
-      // Slow down when aprroaching something
+      // Slow down when aproaching something
       if (tof > 0)
       {
         directionalSpeed *= FOLLOWING_WALL_APPROACHING_FACTOR;
@@ -216,7 +231,7 @@ void stateFollowingSlopeRoutine(int proximityMeasurements[SENSOR_PROXIMITY_COUNT
       motorSpeeds[wallFarMotor] = directionalSpeed - rotationalSpeed;
 
       #ifdef SERIAL_ENABLE
-      Serial.print("following: ");
+
       Serial.print("\tprox: ");
       Serial.print(prox);
       Serial.print("\terror: ");
@@ -232,7 +247,6 @@ void stateFollowingSlopeRoutine(int proximityMeasurements[SENSOR_PROXIMITY_COUNT
       writeRawMotorSpeed(motorSpeeds, wallNearMotor, wallNearMotorDirectionPin, wallNearMotorSpeedPin);
       writeRawMotorSpeed(motorSpeeds, wallFarMotor, wallFarMotorDirectionPin, wallFarMotorSpeedPin);
     }
-
   }
 
   else if (is_state == is_stopping)
@@ -245,6 +259,12 @@ void stateFollowingSlopeRoutine(int proximityMeasurements[SENSOR_PROXIMITY_COUNT
       #endif
 
       flags[FLAG_FOLLOWING_CORNER_DETECTED] = 1;
+
+      // Close
+      servoAngles[ACTUATOR_SERVO_BAR_RIGHT] = ACTUATOR_SERVO_BAR_RIGHT_CLOSED;
+      servoAngles[ACTUATOR_SERVO_BAR_LEFT] = ACTUATOR_SERVO_BAR_LEFT_CLOSED;
+      setServoAngle(servoAngles, ACTUATOR_SERVO_BAR_RIGHT, ACTUATOR_SERVO_BAR_RIGHT_PIN);
+      setServoAngle(servoAngles, ACTUATOR_SERVO_BAR_LEFT, ACTUATOR_SERVO_BAR_LEFT_PIN);
 
       is_state = is_off;
     }
@@ -262,4 +282,7 @@ void stateFollowingSlopeExitRoutine(boolean ledState[LED_COUNT],
   ledState[LED_RUNNING] = LOW;
   stopMotor(ACTUATOR_MOTOR_RIGHT, ACTUATOR_MOTOR_RIGHT_DIRECTION_PIN, ACTUATOR_MOTOR_RIGHT_SPEED_PIN);
   stopMotor(ACTUATOR_MOTOR_LEFT, ACTUATOR_MOTOR_LEFT_DIRECTION_PIN, ACTUATOR_MOTOR_LEFT_SPEED_PIN);
+
+  setServoAngle(ACTUATOR_SERVO_BAR_RIGHT_CLOSED, ACTUATOR_SERVO_BAR_RIGHT, ACTUATOR_SERVO_BAR_RIGHT_PIN);
+  setServoAngle(ACTUATOR_SERVO_BAR_LEFT_CLOSED, ACTUATOR_SERVO_BAR_LEFT, ACTUATOR_SERVO_BAR_LEFT_PIN);
 }

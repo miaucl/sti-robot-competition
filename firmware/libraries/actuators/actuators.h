@@ -53,22 +53,9 @@ void configureServo(int id,
 /**
  * Reset the servo angle
  */
-void resetServoAngle( int servoAngles[ACTUATOR_SERVO_COUNT],
+void setServoAngle( int servoAngles[ACTUATOR_SERVO_COUNT],
                       int id,
                       int pin);
-
-/**
- * Write the servo angle
- */
-void writeServoAngle( int servoAngles[ACTUATOR_SERVO_COUNT],
-                      int id,
-                      int pin);
-
-/**
- * Update the servo control
- */
-void updateServoAngleControl( int id,
-                              int pin);
 
 
 #endif

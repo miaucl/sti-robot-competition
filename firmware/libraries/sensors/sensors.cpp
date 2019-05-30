@@ -214,6 +214,7 @@ bool successfulRead = false; // whether a successful read has happened
 uint8_t mpuIntStatus;   // holds actual interrupt status byte from MPU
 uint8_t devStatus;      // return status after each device operation (0 = success, !0 = error)
 uint16_t packetSize;    // expected DMP packet size (default is 42 bytes)
+uint16_t MaxPackets = 20; // Max allowed packets
 uint16_t fifoCount;     // count of all bytes currently in FIFO
 uint8_t fifoBuffer[64]; // FIFO storage buffer
 
@@ -261,7 +262,7 @@ void GetDMP() { // Best version I have made so far
   fifoCount = mpu.getFIFOCount();
   //Serial.println(fifoCount);
   // we have failed Reset and wait till next time!
-  if ((!fifoCount) || (fifoCount % packetSize))
+  if ((fifoCount % packetSize) || (fifoCount > (packetSize * MaxPackets)) || (fifoCount < packetSize))
   {
     // clear the buffer and start over
     mpu.resetFIFO();
@@ -270,18 +271,21 @@ void GetDMP() { // Best version I have made so far
   }
   else
   {
-    // Get the packets until we have the latest!
     while (fifoCount  >= packetSize)
-    {
+    { // Get the packets until we have the latest!
+      if (fifoCount < packetSize) return; // Something is left over and we don't want it!!!
+      Serial.print("_");
       // lets do the magic and get the data
       mpu.getFIFOBytes(fifoBuffer, packetSize);
       fifoCount -= packetSize;
+      successfulRead = true;
     }
     LastGoodPacketTime = millis();
     // Got new values
-    successfulRead = true;
     // <<<<<<<<<<<<<<<<<<<<<<<<<<<< On success MPUMath() <<<<<<<<<<<<<<<<<<<
     MPUMath(fifoBuffer);
+    // Reset when done and leftovers
+    if (fifoCount > 0) mpu.resetFIFO();
   }
 }
 
@@ -351,6 +355,8 @@ void configureIMU(int i2cDataPin,
 
   // get expected DMP packet size for later comparison
   packetSize = mpu.dmpGetFIFOPacketSize();
+  // Max 20 packets
+  MaxPackets = 20;
   delay(1000); // Let it Stabalize
   mpu.resetFIFO(); // Clear fifo buffer
   mpu.getIntStatus();
@@ -465,9 +471,11 @@ void readIMU( float imuMeasurements[SENSOR_IMU_MEASUREMENT_DIMENSIONS][SENSOR_IM
 
   // Wait until values have been read
   int tryCount = 0;
+  Serial.print("s");
   GetDMP();
   while (!successfulRead)
   {
+    Serial.print("-");
     tryCount++;
     delay(5); // Wait a bit
     GetDMP();
@@ -480,6 +488,7 @@ void readIMU( float imuMeasurements[SENSOR_IMU_MEASUREMENT_DIMENSIONS][SENSOR_IM
       break;
     }
   }
+  Serial.print("e");
 
 
   // #ifdef SERIAL_ENABLE

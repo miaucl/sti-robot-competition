@@ -17,12 +17,14 @@ enum IState
   is_move,
   is_stopping,
   is_bottle_swallowed,
+  is_back_off_start,
+  is_back_off,
   is_off
 };
 static IState is_state = is_start;
 static long openTimestamp = 0;
 static long swallowingTimestamp = 0;
-static int proxDetect = 0;
+static long back_off_timestamp = 0;
 static int bottleInRobot = 0;
 static int proxDetectZero = 0;
 
@@ -81,8 +83,8 @@ void stateSwallowingRoutine(int proximityMeasurements[SENSOR_PROXIMITY_COUNT][SE
 
     servoAngles[ACTUATOR_SERVO_BAR_RIGHT] = ACTUATOR_SERVO_BAR_RIGHT_OPEN;
     servoAngles[ACTUATOR_SERVO_BAR_LEFT] = ACTUATOR_SERVO_BAR_LEFT_OPEN;
-    writeServoAngle(servoAngles, ACTUATOR_SERVO_BAR_RIGHT, ACTUATOR_SERVO_BAR_RIGHT_PIN);
-    writeServoAngle(servoAngles, ACTUATOR_SERVO_BAR_LEFT, ACTUATOR_SERVO_BAR_LEFT_PIN);
+    setServoAngle(servoAngles, ACTUATOR_SERVO_BAR_RIGHT, ACTUATOR_SERVO_BAR_RIGHT_PIN);
+    setServoAngle(servoAngles, ACTUATOR_SERVO_BAR_LEFT, ACTUATOR_SERVO_BAR_LEFT_PIN);
 
     openTimestamp = millis();
     is_state = is_open;
@@ -116,7 +118,9 @@ void stateSwallowingRoutine(int proximityMeasurements[SENSOR_PROXIMITY_COUNT][SE
     Serial.print("\t");
     #endif
 
-    proxDetect = getAverageProximityValue(proximityMeasurements, SENSOR_PROXIMITY_DETECT) - proximityAmbientMeasurements[SENSOR_PROXIMITY_DETECT];
+    int proxDetect = getAverageProximityValue(proximityMeasurements, SENSOR_PROXIMITY_DETECT) - proximityAmbientMeasurements[SENSOR_PROXIMITY_DETECT];
+    int proximityDownLeft = getAverageProximityValue(proximityMeasurements, SENSOR_PROXIMITY_DOWN_LEFT) - proximityAmbientMeasurements[SENSOR_PROXIMITY_DOWN_LEFT];
+    int proximityDownRight = getAverageProximityValue(proximityMeasurements, SENSOR_PROXIMITY_DOWN_RIGHT) - proximityAmbientMeasurements[SENSOR_PROXIMITY_DOWN_RIGHT];
 
     #ifdef SERIAL_ENABLE
     Serial.print("\tbottle detection: ");
@@ -155,8 +159,55 @@ void stateSwallowingRoutine(int proximityMeasurements[SENSOR_PROXIMITY_COUNT][SE
       bottleInRobot = 1;
       is_state = is_stopping;
     }
-  }
+    // TODO: Uncomment when sensors are well positioned
+    else if (//abs(proximityDownLeft) > WANDER_PROXIMITY_DOWN_THRESHOLD ||
+             abs(proximityDownRight) > WANDER_PROXIMITY_DOWN_THRESHOLD)
+    {
+      #ifdef SERIAL_ENABLE
+      Serial.print(" > down detection");
+      #endif
 
+      is_state = is_back_off_start;
+
+      // Stop motors
+      motorSpeeds[ACTUATOR_MOTOR_RIGHT] = 0;
+      motorSpeeds[ACTUATOR_MOTOR_LEFT] = 0;
+      writeMotorSpeed(motorSpeeds, ACTUATOR_MOTOR_RIGHT, ACTUATOR_MOTOR_RIGHT_DIRECTION_PIN, ACTUATOR_MOTOR_RIGHT_SPEED_PIN);
+      writeMotorSpeed(motorSpeeds, ACTUATOR_MOTOR_LEFT, ACTUATOR_MOTOR_LEFT_DIRECTION_PIN, ACTUATOR_MOTOR_LEFT_SPEED_PIN);
+    }
+  }
+  else if (is_state == is_back_off_start)
+  {
+    #ifdef SERIAL_ENABLE
+    Serial.print("start back off");
+    #endif
+    motorSpeeds[ACTUATOR_MOTOR_RIGHT] = -WANDER_PLATFORM_SPEED;
+    motorSpeeds[ACTUATOR_MOTOR_LEFT] = -WANDER_PLATFORM_SPEED;
+    writeMotorSpeed(motorSpeeds, ACTUATOR_MOTOR_RIGHT, ACTUATOR_MOTOR_RIGHT_DIRECTION_PIN, ACTUATOR_MOTOR_RIGHT_SPEED_PIN);
+    writeMotorSpeed(motorSpeeds, ACTUATOR_MOTOR_LEFT, ACTUATOR_MOTOR_LEFT_DIRECTION_PIN, ACTUATOR_MOTOR_LEFT_SPEED_PIN);
+
+    back_off_timestamp = millis();
+
+    is_state = is_back_off;
+  }
+  else if (is_state == is_back_off)
+  {
+    #ifdef SERIAL_ENABLE
+    Serial.print("time: ");
+    Serial.print(millis() - back_off_timestamp);
+    #endif
+
+    if (millis() - back_off_timestamp > SWALLOWING_BACK_OFF_DURATION)
+    {
+      // Stop motors
+      motorSpeeds[ACTUATOR_MOTOR_RIGHT] = 0;
+      motorSpeeds[ACTUATOR_MOTOR_LEFT] = 0;
+      writeMotorSpeed(motorSpeeds, ACTUATOR_MOTOR_RIGHT, ACTUATOR_MOTOR_RIGHT_DIRECTION_PIN, ACTUATOR_MOTOR_RIGHT_SPEED_PIN);
+      writeMotorSpeed(motorSpeeds, ACTUATOR_MOTOR_LEFT, ACTUATOR_MOTOR_LEFT_DIRECTION_PIN, ACTUATOR_MOTOR_LEFT_SPEED_PIN);
+
+      is_state = is_stopping;
+    }
+  }
   else if (is_state == is_stopping)
   {
     if (fabsf(motorSpeedMeasurements[ACTUATOR_MOTOR_LEFT]) < SWALLOWING_STOPPING_THRESHOLD &&
@@ -168,8 +219,8 @@ void stateSwallowingRoutine(int proximityMeasurements[SENSOR_PROXIMITY_COUNT][SE
 
       servoAngles[ACTUATOR_SERVO_BAR_RIGHT] = ACTUATOR_SERVO_BAR_RIGHT_CLOSED;
       servoAngles[ACTUATOR_SERVO_BAR_LEFT] = ACTUATOR_SERVO_BAR_LEFT_CLOSED;
-      writeServoAngle(servoAngles, ACTUATOR_SERVO_BAR_RIGHT, ACTUATOR_SERVO_BAR_RIGHT_PIN);
-      writeServoAngle(servoAngles, ACTUATOR_SERVO_BAR_LEFT, ACTUATOR_SERVO_BAR_LEFT_PIN);
+      setServoAngle(servoAngles, ACTUATOR_SERVO_BAR_RIGHT, ACTUATOR_SERVO_BAR_RIGHT_PIN);
+      setServoAngle(servoAngles, ACTUATOR_SERVO_BAR_LEFT, ACTUATOR_SERVO_BAR_LEFT_PIN);
 
       if(bottleInRobot == 1)
       {
@@ -202,6 +253,6 @@ void stateSwallowingExitRoutine(boolean ledState[LED_COUNT],
   ledState[LED_RUNNING] = LOW;
   stopMotor(ACTUATOR_MOTOR_RIGHT, ACTUATOR_MOTOR_RIGHT_DIRECTION_PIN, ACTUATOR_MOTOR_RIGHT_SPEED_PIN);
   stopMotor(ACTUATOR_MOTOR_LEFT, ACTUATOR_MOTOR_LEFT_DIRECTION_PIN, ACTUATOR_MOTOR_LEFT_SPEED_PIN);
-  resetServoAngle(ACTUATOR_SERVO_BAR_RIGHT_CLOSED, ACTUATOR_SERVO_BAR_RIGHT, ACTUATOR_SERVO_BAR_RIGHT_PIN);
-  resetServoAngle(ACTUATOR_SERVO_BAR_LEFT_CLOSED, ACTUATOR_SERVO_BAR_LEFT, ACTUATOR_SERVO_BAR_LEFT_PIN);
+  setServoAngle(ACTUATOR_SERVO_BAR_RIGHT_CLOSED, ACTUATOR_SERVO_BAR_RIGHT, ACTUATOR_SERVO_BAR_RIGHT_PIN);
+  setServoAngle(ACTUATOR_SERVO_BAR_LEFT_CLOSED, ACTUATOR_SERVO_BAR_LEFT, ACTUATOR_SERVO_BAR_LEFT_PIN);
 }

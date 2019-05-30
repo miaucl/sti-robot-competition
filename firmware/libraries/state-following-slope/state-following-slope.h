@@ -21,6 +21,7 @@ void stateFollowingSlopeRoutine(int proximityMeasurements[SENSOR_PROXIMITY_COUNT
                                 float imuMeasurements[SENSOR_IMU_MEASUREMENT_DIMENSIONS][SENSOR_IMU_MEASUREMENT_COUNT],
                                 double motorSpeeds[ACTUATOR_MOTOR_COUNT],
                                 double motorSpeedMeasurements[ACTUATOR_MOTOR_COUNT],
+                                int servoAngles[ACTUATOR_SERVO_COUNT],
                                 boolean btnState[BTN_COUNT],
                                 boolean ledState[LED_COUNT],
                                 boolean flags[FLAG_COUNT]);
