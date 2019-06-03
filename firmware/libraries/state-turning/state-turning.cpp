@@ -129,8 +129,8 @@ void stateTurningRoutine(float imuMeasurements[SENSOR_IMU_MEASUREMENT_DIMENSIONS
     Serial.print(z);
     #endif
 
-    error = fabsf(z-zDesired);
-    if (error<TURNING_ANGLE_THRESHOLD)
+    error = z-zDesired;
+    if (fabsf(error) < TURNING_ANGLE_THRESHOLD || fabsf(error+360) < TURNING_ANGLE_THRESHOLD || fabsf(error-360) < TURNING_ANGLE_THRESHOLD)
     {
       #ifdef SERIAL_ENABLE
       Serial.print(" > stopping");

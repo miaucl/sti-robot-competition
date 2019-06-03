@@ -12,7 +12,10 @@
 #include "state-estimator.h"
 #include "state-machine.h"
 #include "state-following.h"
-#include "state-following-slope.h"
+#include "state-following-slope.h" 
+
+#include "state-following-collect.h"
+#include "state-slope-down.h"
 #include "state-wander.h"
 #include "state-swallowing.h"
 #include "state-scanning.h"
@@ -27,7 +30,10 @@
  */
 
 // Mode of the robot
-int mode = m_random_navigation;
+//int mode = m_test;
+//int mode = m_random_navigation;
+int mode = m_platform;
+//int mode = m_collect;
 
 // State for the state machine
 int state = s_initialization;
@@ -197,7 +203,7 @@ void loop()
 
   #ifdef DEBUG_ENABLE
   // Testing
-  if (Serial.available() > 0)
+  if (Serial.available() > 0 && mode != m_test)
   {
     // read the incoming byte:
     char b = Serial.read();
@@ -282,6 +288,8 @@ void loop()
       case s_test: stateTestExit(); break;
       case s_following: stateFollowingExit(); break;
       case s_following_slope: stateFollowingSlopeExit(); break;
+      case s_following_collect: stateFollowingCollectExit(); break;
+      case s_slope_down: stateSlopeDownExit(); break;
       case s_swallowing: stateSwallowingExit(); break;
       case s_scanning: stateScanningExit(); break;
       case s_turning: stateTurningExit(); break;
@@ -299,6 +307,8 @@ void loop()
       case s_test: stateTestEnter(); break;
       case s_following: stateFollowingEnter(); break;
       case s_following_slope: stateFollowingSlopeEnter(); break;
+      case s_following_collect: stateFollowingCollectEnter(); break;
+      case s_slope_down: stateSlopeDownEnter(); break;
       case s_swallowing: stateSwallowingEnter(); break;
       case s_scanning: stateScanningEnter(); break;
       case s_turning: stateTurningEnter(); break;
@@ -329,6 +339,8 @@ void loop()
     case s_test: stateTest(); break;
     case s_following: stateFollowing(); break;
     case s_following_slope: stateFollowingSlope(); break;
+    case s_following_collect: stateFollowingCollect(); break;
+    case s_slope_down: stateSlopeDown(); break;
     case s_swallowing: stateSwallowing(); break;
     case s_scanning: stateScanning(); break;
     case s_turning: stateTurning(); break;
@@ -593,8 +605,8 @@ void stateTest()
       writeMotorSpeed(motorSpeeds, ACTUATOR_MOTOR_RIGHT, ACTUATOR_MOTOR_RIGHT_DIRECTION_PIN, ACTUATOR_MOTOR_RIGHT_SPEED_PIN);
       writeMotorSpeed(motorSpeeds, ACTUATOR_MOTOR_LEFT, ACTUATOR_MOTOR_LEFT_DIRECTION_PIN, ACTUATOR_MOTOR_LEFT_SPEED_PIN);
     }
-    setServoAngle(servoAngles, ACTUATOR_SERVO_BAR_RIGHT, ACTUATOR_SERVO_BAR_RIGHT_PIN);
-    setServoAngle(servoAngles, ACTUATOR_SERVO_BAR_LEFT, ACTUATOR_SERVO_BAR_LEFT_PIN);
+    writeServoAngle(servoAngles, ACTUATOR_SERVO_BAR_RIGHT, ACTUATOR_SERVO_BAR_RIGHT_PIN);
+    writeServoAngle(servoAngles, ACTUATOR_SERVO_BAR_LEFT, ACTUATOR_SERVO_BAR_LEFT_PIN);
   }
 
 
@@ -619,7 +631,7 @@ void stateTest()
 //  }
 //
 
-
+//
 //Serial.print("Z: ");
 //Serial.print(getMedianIMUZOrientationValue(imuMeasurements));
 //Serial.print("\tIR: ");
@@ -631,11 +643,11 @@ void stateTest()
 //Serial.print(", ");
 //Serial.println(getFilteredAverageTOFValue(tofMeasurements, SENSOR_TOF_RIGHT));
 
-//Serial.print(getAverageProximityValue(proximityMeasurements, SENSOR_PROXIMITY_DOWN_LEFT) - proximityAmbientMeasurements[SENSOR_PROXIMITY_DOWN_LEFT]);
-//Serial.print(", ");
-//Serial.println(getAverageProximityValue(proximityMeasurements, SENSOR_PROXIMITY_DOWN_RIGHT) - proximityAmbientMeasurements[SENSOR_PROXIMITY_DOWN_RIGHT]);
-
-//Serial.println(getAverageProximityValue(proximityMeasurements, SENSOR_PROXIMITY_DETECT) - proximityAmbientMeasurements[SENSOR_PROXIMITY_DETECT]);
+Serial.print(getAverageProximityValue(proximityMeasurements, SENSOR_PROXIMITY_DOWN_LEFT) - proximityAmbientMeasurements[SENSOR_PROXIMITY_DOWN_LEFT]);
+Serial.print(", ");
+Serial.println(getAverageProximityValue(proximityMeasurements, SENSOR_PROXIMITY_DOWN_RIGHT) - proximityAmbientMeasurements[SENSOR_PROXIMITY_DOWN_RIGHT]);
+Serial.print(", ");
+Serial.println(getAverageProximityValue(proximityMeasurements, SENSOR_PROXIMITY_DETECT) - proximityAmbientMeasurements[SENSOR_PROXIMITY_DETECT]);
 }
 
 void stateTestExit()
@@ -666,6 +678,7 @@ void stateWander()
                       imuMeasurements,
                       motorSpeeds,
                       motorSpeedMeasurements,
+                      servoAngles,
                       btnState,
                       ledState,
                       flags);
@@ -728,6 +741,7 @@ void stateFollowingSlope()
                               proximityAmbientMeasurements,
                               proximityAmbientVarianceMeasurements,
                               tofMeasurements,
+                              estimator.getAngle(),
                               imuMeasurements,
                               motorSpeeds,
                               motorSpeedMeasurements,
@@ -742,6 +756,75 @@ void stateFollowingSlope()
 void stateFollowingSlopeExit()
 {
   stateFollowingSlopeExitRoutine(ledState, flags);
+}
+
+// ================================================================
+// ===                    FOLLOWING COLLECT STATE               ===
+// ================================================================
+
+
+// The "s_following_collect" state
+void stateFollowingCollectEnter()
+{
+  stateFollowingCollectEnterRoutine(ledState, flags);
+}
+
+void stateFollowingCollect()
+{
+  stateFollowingCollectRoutine( proximityMeasurements,
+                                proximityAmbientMeasurements,
+                                proximityAmbientVarianceMeasurements,
+                                tofMeasurements,
+                                estimator.getAngle(),
+                                imuMeasurements,
+                                motorSpeeds,
+                                motorSpeedMeasurements,
+                                servoAngles,
+                                btnState,
+                                ledState,
+                                flags);
+
+  updateAll();
+}
+
+void stateFollowingCollectExit()
+{
+  stateFollowingCollectExitRoutine(ledState, flags);
+}
+
+
+// ================================================================
+// ===                       SLOPE DOWN STATE                   ===
+// ================================================================
+
+
+// The "s_slope_down" state
+void stateSlopeDownEnter()
+{
+  stateSlopeDownEnterRoutine(ledState, flags);
+}
+
+void stateSlopeDown()
+{
+  stateSlopeDownRoutine( proximityMeasurements,
+                              proximityAmbientMeasurements,
+                              proximityAmbientVarianceMeasurements,
+                              tofMeasurements,
+                              estimator.getAngle(),
+                              imuMeasurements,
+                              motorSpeeds,
+                              motorSpeedMeasurements,
+                              servoAngles,
+                              btnState,
+                              ledState,
+                              flags);
+
+  updateAll();
+}
+
+void stateSlopeDownExit()
+{
+  stateSlopeDownExitRoutine(ledState, flags);
 }
 
 
@@ -855,6 +938,7 @@ void stateReturning()
   stateReturningRoutine(proximityMeasurements,
                         proximityAmbientMeasurements,
                         proximityAmbientVarianceMeasurements,
+                        tofMeasurements,
                         estimator.getAngle(),
                         motorSpeeds,
                         motorSpeedMeasurements,
@@ -936,6 +1020,8 @@ void updateAll()
 {
   updateMotorSpeedControl(ACTUATOR_MOTOR_RIGHT, ACTUATOR_MOTOR_RIGHT_DIRECTION_PIN, ACTUATOR_MOTOR_RIGHT_SPEED_PIN, motorSpeedMeasurements);
   updateMotorSpeedControl(ACTUATOR_MOTOR_LEFT, ACTUATOR_MOTOR_LEFT_DIRECTION_PIN, ACTUATOR_MOTOR_LEFT_SPEED_PIN, motorSpeedMeasurements);
+  updateServoAngleControl(ACTUATOR_SERVO_BAR_RIGHT, ACTUATOR_SERVO_BAR_RIGHT_PIN);
+  updateServoAngleControl(ACTUATOR_SERVO_BAR_LEFT, ACTUATOR_SERVO_BAR_LEFT_PIN);
 }
 
 /**

@@ -427,18 +427,17 @@ void stateScanningRoutine(int proximityMeasurements[SENSOR_PROXIMITY_COUNT][SENS
           is_state = is_off;
         }
       }
-      else if (// TODO: Uncomment when sensors are well positioned
-          // abs(proxDownLeft) > SCANNING_PROXIMITY_DOWN_THRESHOLD ||
-          abs(proxDownRight) > SCANNING_PROXIMITY_DOWN_THRESHOLD)
-      {
-        // Stop motors
-        motorSpeeds[ACTUATOR_MOTOR_RIGHT] = 0;
-        motorSpeeds[ACTUATOR_MOTOR_LEFT] = 0;
-        writeMotorSpeed(motorSpeeds, ACTUATOR_MOTOR_RIGHT, ACTUATOR_MOTOR_RIGHT_DIRECTION_PIN, ACTUATOR_MOTOR_RIGHT_SPEED_PIN);
-        writeMotorSpeed(motorSpeeds, ACTUATOR_MOTOR_LEFT, ACTUATOR_MOTOR_LEFT_DIRECTION_PIN, ACTUATOR_MOTOR_LEFT_SPEED_PIN);
-
-        is_state = is_back_off_start;
-      }
+      // else if (abs(proxDownLeft) > SCANNING_PROXIMITY_DOWN_THRESHOLD ||
+      //          abs(proxDownRight) > SCANNING_PROXIMITY_DOWN_THRESHOLD)
+      // {
+      //   // Stop motors
+      //   motorSpeeds[ACTUATOR_MOTOR_RIGHT] = 0;
+      //   motorSpeeds[ACTUATOR_MOTOR_LEFT] = 0;
+      //   writeMotorSpeed(motorSpeeds, ACTUATOR_MOTOR_RIGHT, ACTUATOR_MOTOR_RIGHT_DIRECTION_PIN, ACTUATOR_MOTOR_RIGHT_SPEED_PIN);
+      //   writeMotorSpeed(motorSpeeds, ACTUATOR_MOTOR_LEFT, ACTUATOR_MOTOR_LEFT_DIRECTION_PIN, ACTUATOR_MOTOR_LEFT_SPEED_PIN);
+      //
+      //   is_state = is_back_off_start;
+      // }
     }
   }
   else if (is_state == is_back_off_start)

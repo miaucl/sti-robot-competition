@@ -1,5 +1,5 @@
 /*
-  state-following-slope.h - Following slope state methods
+  state-following-collect.h - Following collect state methods
   Created by Cyrill Lippuner, 2019.
 */
 
@@ -17,6 +17,11 @@ enum IState
   //is_calibrating,
   is_following_wall,
   is_stopping,
+  is_forward,
+  is_forward_stopping,
+  is_waiting,
+  is_backward,
+  is_backward_stopping,
   is_turn_start,
   is_turning,
   is_turn_stopping,
@@ -33,20 +38,23 @@ static int wallFarMotor = 0;
 static int wallFarMotorDirectionPin = 0;
 static int wallFarMotorSpeedPin = 0;
 
-static boolean slopeDone = false;
-static boolean lastProxFrontDetection = false;
+static int proxDetectZero = 0;
+static int proxForwardLeftZero = 0;
+static int proxForwardZero = 0;
+static int proxForwardRightZero = 0;
 
-void stateFollowingSlopeEnterRoutine( boolean ledState[LED_COUNT],
-                                      boolean flags[FLAG_COUNT])
+static long timestamp = 0;
+
+
+void stateFollowingCollectEnterRoutine(boolean ledState[LED_COUNT],
+                                       boolean flags[FLAG_COUNT])
 {
   ledState[LED_RUNNING] = HIGH;
-  slopeDone = false;
-  lastProxFrontDetection = false;
 
   is_state = is_start;
 }
 
-void stateFollowingSlopeRoutine(int proximityMeasurements[SENSOR_PROXIMITY_COUNT][SENSOR_PROXIMITY_MEASUREMENT_COUNT],
+void stateFollowingCollectRoutine(int proximityMeasurements[SENSOR_PROXIMITY_COUNT][SENSOR_PROXIMITY_MEASUREMENT_COUNT],
                                 int proximityAmbientMeasurements[SENSOR_PROXIMITY_COUNT],
                                 int proximityAmbientVarianceMeasurements[SENSOR_PROXIMITY_COUNT],
                                 int tofMeasurements[SENSOR_TOF_COUNT][SENSOR_TOF_MEASUREMENT_COUNT],
@@ -159,10 +167,10 @@ void stateFollowingSlopeRoutine(int proximityMeasurements[SENSOR_PROXIMITY_COUNT
 
   else if (is_state == is_following_wall)
   {
-    if (slopeDone && (getAverageProximityValue(proximityMeasurements, SENSOR_PROXIMITY_FORWARD) - proximityAmbientMeasurements[SENSOR_PROXIMITY_FORWARD]) > FOLLOWING_WALL_CORNER_DETECTED_THRESHOLD)
+    if (getAverageProximityValue(proximityMeasurements, SENSOR_PROXIMITY_FORWARD) - proximityAmbientMeasurements[SENSOR_PROXIMITY_FORWARD] > FOLLOWING_WALL_CORNER_DETECTED_THRESHOLD)
     {
       #ifdef SERIAL_ENABLE
-      Serial.print("corner detected");
+      Serial.print("slope detected");
       #endif
 
        // Stop motors
@@ -172,37 +180,6 @@ void stateFollowingSlopeRoutine(int proximityMeasurements[SENSOR_PROXIMITY_COUNT
       writeMotorSpeed(motorSpeeds, ACTUATOR_MOTOR_LEFT, ACTUATOR_MOTOR_LEFT_DIRECTION_PIN, ACTUATOR_MOTOR_LEFT_SPEED_PIN);
 
       is_state = is_stopping;
-    }
-    else if (!lastProxFrontDetection && (getAverageProximityValue(proximityMeasurements, SENSOR_PROXIMITY_FORWARD) - proximityAmbientMeasurements[SENSOR_PROXIMITY_FORWARD]) > FOLLOWING_WALL_SLOPE_DETECTED_THRESHOLD)
-    {
-      #ifdef SERIAL_ENABLE
-      Serial.print("entering slope detected");
-      #endif
-
-      lastProxFrontDetection = true;
-    }
-    else if (lastProxFrontDetection && !((getAverageProximityValue(proximityMeasurements, SENSOR_PROXIMITY_FORWARD) - proximityAmbientMeasurements[SENSOR_PROXIMITY_FORWARD]) > FOLLOWING_WALL_SLOPE_DETECTED_THRESHOLD))
-    {
-      #ifdef SERIAL_ENABLE
-      Serial.print("entering slope done detected");
-      #endif
-
-      lastProxFrontDetection = false;
-      slopeDone = true;
-
-      // Set motor speed
-      motorSpeeds[wallNearMotor] = FOLLOWING_WALL_ENTER_SLOPE_SPEED;
-      motorSpeeds[wallFarMotor] = FOLLOWING_WALL_ENTER_SLOPE_SPEED;
-
-      writeRawMotorSpeed(motorSpeeds, wallNearMotor, wallNearMotorDirectionPin, wallNearMotorSpeedPin);
-      writeRawMotorSpeed(motorSpeeds, wallFarMotor, wallFarMotorDirectionPin, wallFarMotorSpeedPin);
-    }
-    else if (lastProxFrontDetection)
-    {
-      #ifdef SERIAL_ENABLE
-      Serial.print("\tprox front: ");
-      Serial.print((getAverageProximityValue(proximityMeasurements, SENSOR_PROXIMITY_FORWARD) - proximityAmbientMeasurements[SENSOR_PROXIMITY_FORWARD]));
-      #endif
     }
     else
     {
@@ -262,11 +239,111 @@ void stateFollowingSlopeRoutine(int proximityMeasurements[SENSOR_PROXIMITY_COUNT
       Serial.print("stopped");
       #endif
 
+      motorSpeeds[ACTUATOR_MOTOR_RIGHT] = FOLLOWING_WALL_FORWARD_SPEED;
+      motorSpeeds[ACTUATOR_MOTOR_LEFT] = FOLLOWING_WALL_FORWARD_SPEED;
+      writeMotorSpeed(motorSpeeds, ACTUATOR_MOTOR_RIGHT, ACTUATOR_MOTOR_RIGHT_DIRECTION_PIN, ACTUATOR_MOTOR_RIGHT_SPEED_PIN);
+      writeMotorSpeed(motorSpeeds, ACTUATOR_MOTOR_LEFT, ACTUATOR_MOTOR_LEFT_DIRECTION_PIN, ACTUATOR_MOTOR_LEFT_SPEED_PIN);
+
+      timestamp = millis();
+
+      is_state = is_forward;
+    }
+  }
+  else if (is_state == is_forward)
+  {
+    if (millis() - timestamp > FOLLOWING_WALL_FORWARD_DURATION)
+    {
+      // Stop motors
+      motorSpeeds[ACTUATOR_MOTOR_RIGHT] = 0;
+      motorSpeeds[ACTUATOR_MOTOR_LEFT] = 0;
+      writeMotorSpeed(motorSpeeds, ACTUATOR_MOTOR_RIGHT, ACTUATOR_MOTOR_RIGHT_DIRECTION_PIN, ACTUATOR_MOTOR_RIGHT_SPEED_PIN);
+      writeMotorSpeed(motorSpeeds, ACTUATOR_MOTOR_LEFT, ACTUATOR_MOTOR_LEFT_DIRECTION_PIN, ACTUATOR_MOTOR_LEFT_SPEED_PIN);
+
+      is_state = is_forward_stopping;
+    }
+  }
+  else if (is_state == is_forward_stopping)
+  {
+    if (motorSpeedMeasurements[ACTUATOR_MOTOR_LEFT] < SLOPE_DOWN_STOPPING_THRESHOLD &&
+        motorSpeedMeasurements[ACTUATOR_MOTOR_RIGHT] < SLOPE_DOWN_STOPPING_THRESHOLD)
+    {
+      #ifdef SERIAL_ENABLE
+      Serial.print("forward stopped");
+      #endif
+
+      proxDetectZero = getAverageProximityValue(proximityMeasurements, SENSOR_PROXIMITY_DETECT) - proximityAmbientMeasurements[SENSOR_PROXIMITY_DETECT];
+      proxForwardLeftZero = getAverageProximityValue(proximityMeasurements, SENSOR_PROXIMITY_FORWARD_RIGHT) - proximityAmbientMeasurements[SENSOR_PROXIMITY_FORWARD_RIGHT];
+      proxForwardZero = getAverageProximityValue(proximityMeasurements, SENSOR_PROXIMITY_FORWARD) - proximityAmbientMeasurements[SENSOR_PROXIMITY_FORWARD];
+      proxForwardLeftZero = getAverageProximityValue(proximityMeasurements, SENSOR_PROXIMITY_FORWARD_RIGHT) - proximityAmbientMeasurements[SENSOR_PROXIMITY_FORWARD_RIGHT];
+
+      is_state = is_waiting;
+    }
+  }
+  else if (is_state == is_waiting)
+  {
+    int proxDetect = getAverageProximityValue(proximityMeasurements, SENSOR_PROXIMITY_DETECT) - proximityAmbientMeasurements[SENSOR_PROXIMITY_DETECT] - proxDetect;
+
+    int proxForwardLeft = getAverageProximityValue(proximityMeasurements, SENSOR_PROXIMITY_FORWARD_LEFT) - proximityAmbientMeasurements[SENSOR_PROXIMITY_FORWARD_LEFT] - proxForwardLeft;
+    int proxForward = getAverageProximityValue(proximityMeasurements, SENSOR_PROXIMITY_FORWARD) - proximityAmbientMeasurements[SENSOR_PROXIMITY_FORWARD] - proxForward;
+    int proxForwardRight = getAverageProximityValue(proximityMeasurements, SENSOR_PROXIMITY_FORWARD_RIGHT) - proximityAmbientMeasurements[SENSOR_PROXIMITY_FORWARD_RIGHT] - proxForwardRight;
+
+    #ifdef SERIAL_ENABLE
+    Serial.print("prox: ");
+    Serial.print(proxDetect);
+    Serial.print("\t");
+    Serial.print(proxForwardLeft);
+    Serial.print("\t");
+    Serial.print(proxForward);
+    Serial.print("\t");
+    Serial.print(proxForwardRight);
+    #endif
+
+    if (proxDetect > FOLLOWING_WALL_DETECT_THRESHOLD)
+    {
       // Close
       servoAngles[ACTUATOR_SERVO_BAR_RIGHT] = ACTUATOR_SERVO_BAR_RIGHT_CLOSED;
       servoAngles[ACTUATOR_SERVO_BAR_LEFT] = ACTUATOR_SERVO_BAR_LEFT_CLOSED;
       writeServoAngle(servoAngles, ACTUATOR_SERVO_BAR_RIGHT, ACTUATOR_SERVO_BAR_RIGHT_PIN);
       writeServoAngle(servoAngles, ACTUATOR_SERVO_BAR_LEFT, ACTUATOR_SERVO_BAR_LEFT_PIN);
+
+      motorSpeeds[ACTUATOR_MOTOR_RIGHT] = -FOLLOWING_WALL_BACKWARD_SPEED;
+      motorSpeeds[ACTUATOR_MOTOR_LEFT] = -FOLLOWING_WALL_BACKWARD_SPEED;
+      writeMotorSpeed(motorSpeeds, ACTUATOR_MOTOR_RIGHT, ACTUATOR_MOTOR_RIGHT_DIRECTION_PIN, ACTUATOR_MOTOR_RIGHT_SPEED_PIN);
+      writeMotorSpeed(motorSpeeds, ACTUATOR_MOTOR_LEFT, ACTUATOR_MOTOR_LEFT_DIRECTION_PIN, ACTUATOR_MOTOR_LEFT_SPEED_PIN);
+
+      timestamp = millis();
+
+      is_state = is_backward;
+    }
+  }
+  else if (is_state == is_backward)
+  {
+    if (millis() - timestamp > FOLLOWING_WALL_BACKWARD_DURATION)
+    {
+      servoAngles[ACTUATOR_SERVO_BAR_RIGHT] = ACTUATOR_SERVO_BAR_RIGHT_CLOSED;
+      servoAngles[ACTUATOR_SERVO_BAR_LEFT] = ACTUATOR_SERVO_BAR_LEFT_CLOSED;
+      writeServoAngle(servoAngles, ACTUATOR_SERVO_BAR_RIGHT, ACTUATOR_SERVO_BAR_RIGHT_PIN);
+      writeServoAngle(servoAngles, ACTUATOR_SERVO_BAR_LEFT, ACTUATOR_SERVO_BAR_LEFT_PIN);
+
+      // Stop motors
+      motorSpeeds[ACTUATOR_MOTOR_RIGHT] = 0;
+      motorSpeeds[ACTUATOR_MOTOR_LEFT] = 0;
+      writeMotorSpeed(motorSpeeds, ACTUATOR_MOTOR_RIGHT, ACTUATOR_MOTOR_RIGHT_DIRECTION_PIN, ACTUATOR_MOTOR_RIGHT_SPEED_PIN);
+      writeMotorSpeed(motorSpeeds, ACTUATOR_MOTOR_LEFT, ACTUATOR_MOTOR_LEFT_DIRECTION_PIN, ACTUATOR_MOTOR_LEFT_SPEED_PIN);
+
+      is_state = is_backward_stopping;
+    }
+  }
+  else if (is_state == is_backward_stopping)
+  {
+    if (motorSpeedMeasurements[ACTUATOR_MOTOR_LEFT] < SLOPE_DOWN_STOPPING_THRESHOLD &&
+        motorSpeedMeasurements[ACTUATOR_MOTOR_RIGHT] < SLOPE_DOWN_STOPPING_THRESHOLD)
+    {
+      #ifdef SERIAL_ENABLE
+      Serial.print("back stopped");
+      #endif
+
+      timestamp = millis();
 
       is_state = is_turn_start;
     }
@@ -275,7 +352,7 @@ void stateFollowingSlopeRoutine(int proximityMeasurements[SENSOR_PROXIMITY_COUNT
   {
     #ifdef SERIAL_ENABLE
     Serial.print("desired angle: ");
-    Serial.print(FOLLOWING_WALL_PLATFORM_ARRIVE_ANGLE);
+    Serial.print(FOLLOWING_WALL_COLLECT_ANGLE);
     #endif
     motorSpeeds[ACTUATOR_MOTOR_RIGHT] = 0;
     motorSpeeds[ACTUATOR_MOTOR_LEFT] = 0;
@@ -286,10 +363,10 @@ void stateFollowingSlopeRoutine(int proximityMeasurements[SENSOR_PROXIMITY_COUNT
   }
   else if (is_state == is_turning)
   {
-    float error = wrapPI(estimatedAngle - FOLLOWING_WALL_PLATFORM_ARRIVE_ANGLE);
-    float turningSpeed = error * FOLLOWING_WALL_PLATFORM_ARRIVE_TURNING_REACTIVITY;
-    turningSpeed = max(turningSpeed, -FOLLOWING_WALL_PLATFORM_ARRIVE_TURNING_MAX_SPEED);
-    turningSpeed = min(turningSpeed, FOLLOWING_WALL_PLATFORM_ARRIVE_TURNING_MAX_SPEED);
+    float error = wrapPI(estimatedAngle - FOLLOWING_WALL_COLLECT_ANGLE);
+    float turningSpeed = error * FOLLOWING_WALL_COLLECT_TURNING_REACTIVITY;
+    turningSpeed = max(turningSpeed, -FOLLOWING_WALL_COLLECT_TURNING_MAX_SPEED);
+    turningSpeed = min(turningSpeed, FOLLOWING_WALL_COLLECT_TURNING_MAX_SPEED);
     #ifdef SERIAL_ENABLE
     Serial.print("turning: ");
     Serial.print(error);
@@ -302,7 +379,7 @@ void stateFollowingSlopeRoutine(int proximityMeasurements[SENSOR_PROXIMITY_COUNT
     writeRawMotorSpeed(motorSpeeds, ACTUATOR_MOTOR_RIGHT, ACTUATOR_MOTOR_RIGHT_DIRECTION_PIN, ACTUATOR_MOTOR_RIGHT_SPEED_PIN);
     writeRawMotorSpeed(motorSpeeds, ACTUATOR_MOTOR_LEFT, ACTUATOR_MOTOR_LEFT_DIRECTION_PIN, ACTUATOR_MOTOR_LEFT_SPEED_PIN);
 
-    if (fabsf(error) < FOLLOWING_WALL_PLATFORM_ARRIVE_TURNING_STOPPING_THRESHOLD)
+    if (fabsf(error) < FOLLOWING_WALL_STOPPING_THRESHOLD)
     {
       #ifdef SERIAL_ENABLE
       Serial.print(" > stopping");
@@ -325,7 +402,7 @@ void stateFollowingSlopeRoutine(int proximityMeasurements[SENSOR_PROXIMITY_COUNT
       Serial.print(" stopped");
       #endif
 
-      flags[FLAG_FOLLOWING_CORNER_DETECTED] = 1;
+      flags[FLAG_SWALLOWED_BOTTLE] = 1;
 
       is_state = is_off;
     }
@@ -337,7 +414,7 @@ void stateFollowingSlopeRoutine(int proximityMeasurements[SENSOR_PROXIMITY_COUNT
 }
 
 
-void stateFollowingSlopeExitRoutine(boolean ledState[LED_COUNT],
+void stateFollowingCollectExitRoutine(boolean ledState[LED_COUNT],
                                     boolean flags[FLAG_COUNT])
 {
   ledState[LED_RUNNING] = LOW;

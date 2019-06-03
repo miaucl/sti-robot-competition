@@ -1,35 +1,37 @@
 /*
-  state-returning.h - Returns to the recycling zone
+  state-slope-down.h - Slope down state methods
   Created by Cyrill Lippuner, 2019.
 */
-#ifndef STATE_RETURNING_h
-#define STATE_RETURNING_h
+#ifndef STATE_SLOPE_DOWN_h
+#define STATE_SLOPE_DOWN_h
 
 /**
- * Enter the state <state>
+ * Enter the state following
  */
-void stateReturningEnterRoutine(boolean ledState[LED_COUNT],
+void stateSlopeDownEnterRoutine(boolean ledState[LED_COUNT],
                                 boolean flags[FLAG_COUNT]);
 
 /**
- * Run the state <state>
+ * Run the state following
  */
-void stateReturningRoutine( int proximityMeasurements[SENSOR_PROXIMITY_COUNT][SENSOR_PROXIMITY_MEASUREMENT_COUNT],
+void stateSlopeDownRoutine( int proximityMeasurements[SENSOR_PROXIMITY_COUNT][SENSOR_PROXIMITY_MEASUREMENT_COUNT],
                             int proximityAmbientMeasurements[SENSOR_PROXIMITY_COUNT],
                             int proximityAmbientVarianceMeasurements[SENSOR_PROXIMITY_COUNT],
                             int tofMeasurements[SENSOR_TOF_COUNT][SENSOR_TOF_MEASUREMENT_COUNT],
                             float estimatedAngle,
+                            float imuMeasurements[SENSOR_IMU_MEASUREMENT_DIMENSIONS][SENSOR_IMU_MEASUREMENT_COUNT],
                             double motorSpeeds[ACTUATOR_MOTOR_COUNT],
                             double motorSpeedMeasurements[ACTUATOR_MOTOR_COUNT],
+                            int servoAngles[ACTUATOR_SERVO_COUNT],
                             boolean btnState[BTN_COUNT],
                             boolean ledState[LED_COUNT],
                             boolean flags[FLAG_COUNT]);
 
 /**
- * Exit the state <state>
+ * Exit the state following
  */
-void stateReturningExitRoutine( boolean ledState[LED_COUNT],
-                                boolean flags[FLAG_COUNT]);
+void stateSlopeDownExitRoutine(boolean ledState[LED_COUNT],
+                               boolean flags[FLAG_COUNT]);
 
 
 #endif

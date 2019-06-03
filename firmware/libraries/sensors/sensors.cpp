@@ -276,7 +276,7 @@ void GetDMP() { // Best version I have made so far
       if (fifoCount < packetSize) return; // Something is left over and we don't want it!!!
       Serial.print("_");
       // lets do the magic and get the data
-      mpu.getFIFOBytes(fifoBuffer, packetSize);
+      mpu.getFIFOBytes(fifoBuffer, packetSize); // <====== FUCK YOU
       fifoCount -= packetSize;
       successfulRead = true;
     }
@@ -467,7 +467,7 @@ void calibrateIMU()
 void readIMU( float imuMeasurements[SENSOR_IMU_MEASUREMENT_DIMENSIONS][SENSOR_IMU_MEASUREMENT_COUNT],
               int *imuMeasurementIndex)
 {
-  if (mpuInterrupt == 0) return;
+  if (!mpuInterrupt) return;
 
   // Wait until values have been read
   int tryCount = 0;
@@ -485,6 +485,7 @@ void readIMU( float imuMeasurements[SENSOR_IMU_MEASUREMENT_DIMENSIONS][SENSOR_IM
       #ifdef SERIAL_ENABLE
       Serial.println("IMU read failed…");
       #endif
+      //delay(1);
       break;
     }
   }
@@ -588,6 +589,135 @@ float getMedianIMUZOrientationValue(float imuMeasurements[SENSOR_IMU_MEASUREMENT
   // Compensate for drift
   medianMeasurement -= SENSOR_IMU_YAW_DRIFT * millis();
   medianMeasurement = wrapPI(medianMeasurement);
+
+  return medianMeasurement;
+}
+
+
+/**
+ * Get the median value for the pitch orientation
+ */
+float getMedianIMUPitchOrientationValue(float imuMeasurements[SENSOR_IMU_MEASUREMENT_DIMENSIONS][SENSOR_IMU_MEASUREMENT_COUNT])
+{
+  // Calculate the median of the past measurements
+
+  // Copy values
+  float sortedMeasurements[SENSOR_IMU_MEASUREMENT_COUNT] = {0};
+  for (int i = 0; i<SENSOR_IMU_MEASUREMENT_COUNT; i++)
+  {
+    //sortedMeasurements[i] = imuMeasurements[SENSOR_IMU_YAW][i];
+    sortedMeasurements[i] = imuMeasurements[SENSOR_IMU_PITCH][i];
+    //sortedMeasurements[i] = imuMeasurements[SENSOR_IMU_ROLL][i];
+  }
+
+  // Sort values
+  int sortedMeasurementsLength = sizeof(sortedMeasurements) / sizeof(sortedMeasurements[0]);
+  qsort(sortedMeasurements, sortedMeasurementsLength, sizeof(sortedMeasurements[0]), sort_asc);
+
+  // Check for overflow
+  boolean overflow = false;
+  int overflowIndex = 0;
+  for (int i = 0; i<SENSOR_IMU_MEASUREMENT_COUNT - 1; i++)
+  {
+    // Too big jump means overflow
+    if (fabsf(sortedMeasurements[i] - sortedMeasurements[i + 1]) > 180.f)
+    {
+      overflow = true;
+      overflowIndex = i;
+      break;
+    }
+  }
+
+  int medianOffset = 0;
+  int medianLength = SENSOR_IMU_MEASUREMENT_COUNT;
+
+  // Use the part with more values
+  if (overflow)
+  {
+    if (overflowIndex > SENSOR_IMU_MEASUREMENT_COUNT / 2)
+    {
+      medianOffset = overflowIndex;
+      medianLength = SENSOR_IMU_MEASUREMENT_COUNT - medianOffset;
+    }
+    else
+    {
+      medianOffset = 0;
+      medianLength = overflowIndex + 1;
+    }
+  }
+
+
+  // Take the middle part and average
+  float medianMeasurement = 0;
+  for (int i = medianLength/3; i<medianLength - (medianLength/3); i++)
+  {
+    medianMeasurement += sortedMeasurements[medianOffset + i];
+  }
+  medianMeasurement /= medianLength - (2 * (medianLength/3));
+
+  return medianMeasurement;
+}
+
+/**
+ * Get the median value for the roll orientation
+ */
+float getMedianIMURollOrientationValue(float imuMeasurements[SENSOR_IMU_MEASUREMENT_DIMENSIONS][SENSOR_IMU_MEASUREMENT_COUNT])
+{
+  // Calculate the median of the past measurements
+
+  // Copy values
+  float sortedMeasurements[SENSOR_IMU_MEASUREMENT_COUNT] = {0};
+  for (int i = 0; i<SENSOR_IMU_MEASUREMENT_COUNT; i++)
+  {
+    //sortedMeasurements[i] = imuMeasurements[SENSOR_IMU_YAW][i];
+    //sortedMeasurements[i] = imuMeasurements[SENSOR_IMU_PITCH][i];
+    sortedMeasurements[i] = imuMeasurements[SENSOR_IMU_ROLL][i];
+  }
+
+  // Sort values
+  int sortedMeasurementsLength = sizeof(sortedMeasurements) / sizeof(sortedMeasurements[0]);
+  qsort(sortedMeasurements, sortedMeasurementsLength, sizeof(sortedMeasurements[0]), sort_asc);
+
+  // Check for overflow
+  boolean overflow = false;
+  int overflowIndex = 0;
+  for (int i = 0; i<SENSOR_IMU_MEASUREMENT_COUNT - 1; i++)
+  {
+    // Too big jump means overflow
+    if (fabsf(sortedMeasurements[i] - sortedMeasurements[i + 1]) > 180.f)
+    {
+      overflow = true;
+      overflowIndex = i;
+      break;
+    }
+  }
+
+  int medianOffset = 0;
+  int medianLength = SENSOR_IMU_MEASUREMENT_COUNT;
+
+  // Use the part with more values
+  if (overflow)
+  {
+    if (overflowIndex > SENSOR_IMU_MEASUREMENT_COUNT / 2)
+    {
+      medianOffset = overflowIndex;
+      medianLength = SENSOR_IMU_MEASUREMENT_COUNT - medianOffset;
+    }
+    else
+    {
+      medianOffset = 0;
+      medianLength = overflowIndex + 1;
+    }
+  }
+
+
+  // Take the middle part and average
+  float medianMeasurement = 0;
+  for (int i = medianLength/3; i<medianLength - (medianLength/3); i++)
+  {
+    medianMeasurement += sortedMeasurements[medianOffset + i];
+  }
+  medianMeasurement /= medianLength - (2 * (medianLength/3));
 
   return medianMeasurement;
 }
