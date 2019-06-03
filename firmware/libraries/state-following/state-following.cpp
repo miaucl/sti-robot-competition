@@ -158,7 +158,7 @@ void stateFollowingRoutine(int proximityMeasurements[SENSOR_PROXIMITY_COUNT][SEN
     else
     {
       int prox = getAverageProximityValue(proximityMeasurements, proximityToConsider) - proximityAmbientMeasurements[proximityToConsider];
-      float error = (prox - FOLLOWING_WALL_DESIRED_WALL_DISTANCE);
+      float error = prox - FOLLOWING_WALL_DESIRED_WALL_DISTANCE;
 
       int tof = getFilteredAverageTOFValue(tofMeasurements, SENSOR_TOF_CENTER);
 

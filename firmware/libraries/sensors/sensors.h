@@ -104,6 +104,15 @@ void readIMU( float imuMeasurements[SENSOR_IMU_MEASUREMENT_DIMENSIONS][SENSOR_IM
  */
 float getMedianIMUZOrientationValue(float imuMeasurements[SENSOR_IMU_MEASUREMENT_DIMENSIONS][SENSOR_IMU_MEASUREMENT_COUNT]);
 
+/**
+ * Get the median value for the pitch orientation
+ */
+float getMedianIMUPitchOrientationValue(float imuMeasurements[SENSOR_IMU_MEASUREMENT_DIMENSIONS][SENSOR_IMU_MEASUREMENT_COUNT]);
+
+/**
+ * Get the median value for the roll orientation
+ */
+float getMedianIMURollOrientationValue(float imuMeasurements[SENSOR_IMU_MEASUREMENT_DIMENSIONS][SENSOR_IMU_MEASUREMENT_COUNT]);
 
 /**
  * Configure the buttons

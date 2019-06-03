@@ -18,6 +18,7 @@ void stateFollowingSlopeRoutine(int proximityMeasurements[SENSOR_PROXIMITY_COUNT
                                 int proximityAmbientMeasurements[SENSOR_PROXIMITY_COUNT],
                                 int proximityAmbientVarianceMeasurements[SENSOR_PROXIMITY_COUNT],
                                 int tofMeasurements[SENSOR_TOF_COUNT][SENSOR_TOF_MEASUREMENT_COUNT],
+                                float estimatedAngle,
                                 float imuMeasurements[SENSOR_IMU_MEASUREMENT_DIMENSIONS][SENSOR_IMU_MEASUREMENT_COUNT],
                                 double motorSpeeds[ACTUATOR_MOTOR_COUNT],
                                 double motorSpeedMeasurements[ACTUATOR_MOTOR_COUNT],
