@@ -15,6 +15,7 @@ State checkStateTransition( State currentState,
                             Mode mode,
                             long stateChangeTimestamp,
                             boolean btnState[BTN_COUNT],
+                            boolean ledState[LED_COUNT],
                             boolean flags[FLAG_COUNT],
                             StateEstimator *stateEstimator);
 

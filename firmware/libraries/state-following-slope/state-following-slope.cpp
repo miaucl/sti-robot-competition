@@ -179,16 +179,10 @@ void stateFollowingSlopeRoutine(int proximityMeasurements[SENSOR_PROXIMITY_COUNT
       Serial.print("entering slope detected");
       #endif
 
-      lastProxFrontDetection = true;
-    }
-    else if (lastProxFrontDetection && !((getAverageProximityValue(proximityMeasurements, SENSOR_PROXIMITY_FORWARD) - proximityAmbientMeasurements[SENSOR_PROXIMITY_FORWARD]) > FOLLOWING_WALL_SLOPE_DETECTED_THRESHOLD))
-    {
       #ifdef SERIAL_ENABLE
-      Serial.print("entering slope done detected");
+      Serial.print("\tprox front: ");
+      Serial.print((getAverageProximityValue(proximityMeasurements, SENSOR_PROXIMITY_FORWARD) - proximityAmbientMeasurements[SENSOR_PROXIMITY_FORWARD]));
       #endif
-
-      lastProxFrontDetection = false;
-      slopeDone = true;
 
       // Set motor speed
       motorSpeeds[wallNearMotor] = FOLLOWING_WALL_ENTER_SLOPE_SPEED;
@@ -196,6 +190,22 @@ void stateFollowingSlopeRoutine(int proximityMeasurements[SENSOR_PROXIMITY_COUNT
 
       writeRawMotorSpeed(motorSpeeds, wallNearMotor, wallNearMotorDirectionPin, wallNearMotorSpeedPin);
       writeRawMotorSpeed(motorSpeeds, wallFarMotor, wallFarMotorDirectionPin, wallFarMotorSpeedPin);
+
+      lastProxFrontDetection = true;
+    }
+    else if (lastProxFrontDetection && !((getAverageProximityValue(proximityMeasurements, SENSOR_PROXIMITY_FORWARD) - proximityAmbientMeasurements[SENSOR_PROXIMITY_FORWARD]) > FOLLOWING_WALL_SLOPE_DONE_DETECTED_THRESHOLD))
+    {
+      #ifdef SERIAL_ENABLE
+      Serial.print("entering slope done detected");
+      #endif
+
+      #ifdef SERIAL_ENABLE
+      Serial.print("\tprox front: ");
+      Serial.print((getAverageProximityValue(proximityMeasurements, SENSOR_PROXIMITY_FORWARD) - proximityAmbientMeasurements[SENSOR_PROXIMITY_FORWARD]));
+      #endif
+
+      lastProxFrontDetection = false;
+      slopeDone = true;
     }
     else if (lastProxFrontDetection)
     {

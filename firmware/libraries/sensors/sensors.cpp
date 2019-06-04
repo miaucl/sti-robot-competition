@@ -274,7 +274,7 @@ void GetDMP() { // Best version I have made so far
     while (fifoCount  >= packetSize)
     { // Get the packets until we have the latest!
       if (fifoCount < packetSize) return; // Something is left over and we don't want it!!!
-      Serial.print("_");
+      //Serial.print("_");
       // lets do the magic and get the data
       mpu.getFIFOBytes(fifoBuffer, packetSize); // <====== FUCK YOU
       fifoCount -= packetSize;
@@ -471,11 +471,11 @@ void readIMU( float imuMeasurements[SENSOR_IMU_MEASUREMENT_DIMENSIONS][SENSOR_IM
 
   // Wait until values have been read
   int tryCount = 0;
-  Serial.print("s");
+  //Serial.print("s");
   GetDMP();
   while (!successfulRead)
   {
-    Serial.print("-");
+    //Serial.print("-");
     tryCount++;
     delay(5); // Wait a bit
     GetDMP();
@@ -489,7 +489,7 @@ void readIMU( float imuMeasurements[SENSOR_IMU_MEASUREMENT_DIMENSIONS][SENSOR_IM
       break;
     }
   }
-  Serial.print("e");
+  //Serial.print("e");
 
 
   // #ifdef SERIAL_ENABLE

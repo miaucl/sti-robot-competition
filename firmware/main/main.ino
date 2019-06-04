@@ -22,6 +22,7 @@
 #include "state-turning.h"
 #include "state-returning.h"
 #include "state-emptying.h"
+#include "state-poi.h"
 
 
 
@@ -30,18 +31,20 @@
  */
 
 // Mode of the robot
-//int mode = m_test;
 //int mode = m_random_navigation;
+//int mode = m_poi_navigation;
 int mode = m_platform;
 //int mode = m_collect;
+//int mode = m_test;
 
 // State for the state machine
 int state = s_initialization;
 long stateChangeTimestamp = millis();
 
-// Global pause
+// Global pause and weak pause
 boolean globalPause = false;
 boolean nGlobalPauseButtonState = true;
+boolean weakPause = false;
 
 // The measurements for the proximity sensors
 int proximityAmbientMeasurements[SENSOR_PROXIMITY_COUNT] = {0};
@@ -192,6 +195,16 @@ void loop()
   // Return if globally paused
   if (globalPause) return;
 
+  // Weak pause
+  if (btnState[BTN_STATE])
+  {
+    weakPause = true;
+  }
+  else if (btnState[BTN_START])
+  {
+    weakPause = false;
+  }
+
   // Wait for period
   static long lastPeriodStart = millis();
   static long dt = 0;
@@ -229,8 +242,8 @@ void loop()
   #endif
 
 
-  // Check for mode selection (only possible in state s_initialization or s_idle)
-  if ((state == s_initialization || state == s_idle) && btnState[BTN_MODE])
+  // Check for mode selection (only possible in state s_initialization, s_idle or s_calibration)
+  if ((state == s_initialization || state == s_idle || state == s_calibration) && btnState[BTN_MODE])
   {
     if (++mode >= MODE_LENGTH) 
     {
@@ -266,7 +279,7 @@ void loop()
 
 
   // Check for state transition
-  State nextState = checkStateTransition(state, mode, stateChangeTimestamp, btnState, flags, &estimator);
+  State nextState = checkStateTransition(state, mode, stateChangeTimestamp, btnState, ledState, flags, &estimator);
   if (state != nextState)
   {
     #ifdef SERIAL_ENABLE
@@ -295,6 +308,7 @@ void loop()
       case s_turning: stateTurningExit(); break;
       case s_returning: stateReturningExit(); break;
       case s_emptying: stateEmptyingExit(); break;
+      case s_poi: statePOIExit(); break;
     }
 
     // Enter next state
@@ -314,6 +328,7 @@ void loop()
       case s_turning: stateTurningEnter(); break;
       case s_returning: stateReturningEnter(); break;
       case s_emptying: stateEmptyingEnter(); break;
+      case s_poi: statePOIEnter(); break;
     }
 
     // Set next state
@@ -330,27 +345,33 @@ void loop()
   // Update Estimator
   updateEstimator(dt);
 
-  switch (state)
+  if (!weakPause)
   {
-    case s_initialization: stateInitialization(); break;
-    case s_calibration: stateCalibration(); break;
-    case s_idle: stateIdle(); break;
-    case s_wander: stateWander(); break;
-    case s_test: stateTest(); break;
-    case s_following: stateFollowing(); break;
-    case s_following_slope: stateFollowingSlope(); break;
-    case s_following_collect: stateFollowingCollect(); break;
-    case s_slope_down: stateSlopeDown(); break;
-    case s_swallowing: stateSwallowing(); break;
-    case s_scanning: stateScanning(); break;
-    case s_turning: stateTurning(); break;
-    case s_returning: stateReturning(); break;
-    case s_emptying: stateEmptying(); break;
+    switch (state)
+    {
+      case s_initialization: stateInitialization(); break;
+      case s_calibration: stateCalibration(); break;
+      case s_idle: stateIdle(); break;
+      case s_wander: stateWander(); break;
+      case s_test: stateTest(); break;
+      case s_following: stateFollowing(); break;
+      case s_following_slope: stateFollowingSlope(); break;
+      case s_following_collect: stateFollowingCollect(); break;
+      case s_slope_down: stateSlopeDown(); break;
+      case s_swallowing: stateSwallowing(); break;
+      case s_scanning: stateScanning(); break;
+      case s_turning: stateTurning(); break;
+      case s_returning: stateReturning(); break;
+      case s_emptying: stateEmptying(); break;
+      case s_poi: statePOI(); break;
+    }    
   }
+
 
 
   // Feedback
   ledState[LED_ALIVE] = generatePing();
+  ledState[LED_BOTTLE] = flags[FLAG_SWALLOWED_BOTTLE];
   writeLeds(ledState);
 
   // Logging
@@ -612,42 +633,42 @@ void stateTest()
 
 
   updateAll();
-//
-//  int p = getAverageProximityValue(proximityMeasurements, SENSOR_PROXIMITY_FORWARD);
-//  int tl = getFilteredAverageTOFValue(tofMeasurements, SENSOR_TOF_LEFT);
-//  int tc = getFilteredAverageTOFValue(tofMeasurements, SENSOR_TOF_CENTER);
-//  int tr = getFilteredAverageTOFValue(tofMeasurements, SENSOR_TOF_RIGHT);
-//  if (p > 300 && (tl == 0 || tl > 32) && (tc == 0 || tc > 32) && (tr == 0 || tr > 32))
-//  {
-//    Serial.println("Bottle");
-//  }
-//  else if (p > 200 && (tl > 0 && tl < 32 || tc > 0 && tc < 32 || tr > 0 && tr < 32))
-//  {
-//    Serial.println("Wall");
-//  }
-//  else
-//  {
-//    Serial.println("–");
-//  }
-//
 
-//
-//Serial.print("Z: ");
-//Serial.print(getMedianIMUZOrientationValue(imuMeasurements));
-//Serial.print("\tIR: ");
-//Serial.print(getAverageProximityValue(proximityMeasurements, SENSOR_PROXIMITY_FORWARD));
-//Serial.print("\tTOF: ");
-//Serial.print(getFilteredAverageTOFValue(tofMeasurements, SENSOR_TOF_LEFT));
-//Serial.print(", ");
-//Serial.print(getFilteredAverageTOFValue(tofMeasurements, SENSOR_TOF_CENTER));
-//Serial.print(", ");
-//Serial.println(getFilteredAverageTOFValue(tofMeasurements, SENSOR_TOF_RIGHT));
+  int p = getAverageProximityValue(proximityMeasurements, SENSOR_PROXIMITY_FORWARD);
+  int tl = getFilteredAverageTOFValue(tofMeasurements, SENSOR_TOF_LEFT);
+  int tc = getFilteredAverageTOFValue(tofMeasurements, SENSOR_TOF_CENTER);
+  int tr = getFilteredAverageTOFValue(tofMeasurements, SENSOR_TOF_RIGHT);
+  if (p > 300 && (tl == 0 || tl > 32) && (tc == 0 || tc > 32) && (tr == 0 || tr > 32))
+  {
+    Serial.println("Bottle");
+  }
+  else if (p > 200 && (tl > 0 && tl < 32 || tc > 0 && tc < 32 || tr > 0 && tr < 32))
+  {
+    Serial.println("Wall");
+  }
+  else
+  {
+    Serial.println("–");
+  }
 
-Serial.print(getAverageProximityValue(proximityMeasurements, SENSOR_PROXIMITY_DOWN_LEFT) - proximityAmbientMeasurements[SENSOR_PROXIMITY_DOWN_LEFT]);
+
+
+Serial.print("Z: ");
+Serial.print(getMedianIMUZOrientationValue(imuMeasurements));
+Serial.print("\tIR: ");
+Serial.print(getAverageProximityValue(proximityMeasurements, SENSOR_PROXIMITY_FORWARD));
+Serial.print("\tTOF: ");
+Serial.print(getFilteredAverageTOFValue(tofMeasurements, SENSOR_TOF_LEFT));
 Serial.print(", ");
-Serial.println(getAverageProximityValue(proximityMeasurements, SENSOR_PROXIMITY_DOWN_RIGHT) - proximityAmbientMeasurements[SENSOR_PROXIMITY_DOWN_RIGHT]);
+Serial.print(getFilteredAverageTOFValue(tofMeasurements, SENSOR_TOF_CENTER));
 Serial.print(", ");
-Serial.println(getAverageProximityValue(proximityMeasurements, SENSOR_PROXIMITY_DETECT) - proximityAmbientMeasurements[SENSOR_PROXIMITY_DETECT]);
+Serial.println(getFilteredAverageTOFValue(tofMeasurements, SENSOR_TOF_RIGHT));
+//
+//Serial.print(getAverageProximityValue(proximityMeasurements, SENSOR_PROXIMITY_DOWN_LEFT) - proximityAmbientMeasurements[SENSOR_PROXIMITY_DOWN_LEFT]);
+//Serial.print(", ");
+//Serial.println(getAverageProximityValue(proximityMeasurements, SENSOR_PROXIMITY_DOWN_RIGHT) - proximityAmbientMeasurements[SENSOR_PROXIMITY_DOWN_RIGHT]);
+//Serial.print(", ");
+//Serial.println(getAverageProximityValue(proximityMeasurements, SENSOR_PROXIMITY_DETECT) - proximityAmbientMeasurements[SENSOR_PROXIMITY_DETECT]);
 }
 
 void stateTestExit()
@@ -983,6 +1004,43 @@ void stateEmptyingExit()
 {
   stateEmptyingExitRoutine(ledState, flags);
 }
+
+
+
+// ================================================================
+// ===                      RETURNING STATE                     ===
+// ================================================================
+
+
+// The "s_poi" state
+void statePOIEnter()
+{
+  statePOIEnterRoutine(ledState, flags);
+}
+
+void statePOI()
+{
+  statePOIRoutine(proximityMeasurements,
+                  proximityAmbientMeasurements,
+                  proximityAmbientVarianceMeasurements,
+                  tofMeasurements,
+                  estimator.getAngle(),
+                  estimator.getPosition(),
+                  motorSpeeds,
+                  motorSpeedMeasurements,
+                  btnState,
+                  ledState,
+                  flags);
+
+  updateAll();
+}
+
+void statePOIExit()
+{
+  statePOIExitRoutine(ledState, flags);
+}
+
+
 
 /**
  * Read all

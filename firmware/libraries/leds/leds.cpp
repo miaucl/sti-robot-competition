@@ -12,6 +12,10 @@ void configureLeds()
   pinMode(LED_SYSTEM_PIN, OUTPUT);
   pinMode(LED_ALIVE_PIN, OUTPUT);
   pinMode(LED_EEPROM_PIN, OUTPUT);
+  pinMode(LED_BOTTLE, OUTPUT);
+  pinMode(LED_NEXT_STATE, OUTPUT);
+  pinMode(LED_6, OUTPUT);
+  pinMode(LED_7, OUTPUT);
 }
 
 // Write the let states
@@ -21,6 +25,10 @@ void writeLeds(boolean ledState[LED_COUNT])
   digitalWrite(LED_RUNNING_PIN, ledState[LED_RUNNING]);
   digitalWrite(LED_ALIVE_PIN, ledState[LED_ALIVE]);
   digitalWrite(LED_EEPROM_PIN, ledState[LED_EEPROM]);
+  digitalWrite(LED_BOTTLE_PIN, ledState[LED_BOTTLE]);
+  digitalWrite(LED_NEXT_STATE_PIN, ledState[LED_NEXT_STATE]);
+  digitalWrite(LED_6_PIN, ledState[LED_6]);
+  digitalWrite(LED_7_PIN, ledState[LED_7]);
 }
 
 

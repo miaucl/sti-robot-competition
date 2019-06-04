@@ -242,6 +242,17 @@ void stateReturningRoutine( int proximityMeasurements[SENSOR_PROXIMITY_COUNT][SE
       leftSpeed += RETURNING_BRAITENBERG_PROX_FORWARD_RIGHT_LEFT_FACTOR * abs(proxRightForward);
 
 
+      // Prox left sensor
+      int proxLeft = getAverageProximityValue(proximityMeasurements, SENSOR_PROXIMITY_LEFT) - proximityAmbientMeasurements[SENSOR_PROXIMITY_LEFT];
+      rightSpeed += RETURNING_BRAITENBERG_PROX_LEFT_RIGHT_FACTOR * abs(proxLeft);
+      leftSpeed += RETURNING_BRAITENBERG_PROX_LEFT_LEFT_FACTOR * abs(proxLeft);
+
+      // Prox right sensor
+      int proxRight = getAverageProximityValue(proximityMeasurements, SENSOR_PROXIMITY_RIGHT) - proximityAmbientMeasurements[SENSOR_PROXIMITY_RIGHT];
+      rightSpeed += RETURNING_BRAITENBERG_PROX_RIGHT_RIGHT_FACTOR * abs(proxRight);
+      leftSpeed += RETURNING_BRAITENBERG_PROX_RIGHT_LEFT_FACTOR * abs(proxRight);
+
+
       // Angle
       float angleError = wrapPI(estimatedAngle - ((flags[FLAG_ON_PLATFORM]) ? RETURNING_TARGET_ANGLE_PLATFORM : RETURNING_TARGET_ANGLE));
       rightSpeed -= RETURNING_BRAITENBERG_ANGLE_ERROR_FACTOR * angleError;

@@ -31,6 +31,9 @@ static long back_off_timestamp = 0;
 static int proxDownLeftZero = 0;
 static int proxDownRightZero = 0;
 
+static float pitchZero = 0;
+static float rollZero = 0;
+
 static boolean ignoreRight = false;
 static boolean ignoreLeft = false;
 
@@ -47,6 +50,8 @@ void stateWanderEnterRoutine( boolean ledState[LED_COUNT],
 
   proxDownLeftZero = 0;
   proxDownRightZero = 0;
+  pitchZero = 0;
+  rollZero = 0;
 
   is_state = is_start;
 }
@@ -102,6 +107,9 @@ void stateWanderRoutine(int proximityMeasurements[SENSOR_PROXIMITY_COUNT][SENSOR
   float tofCenter = getFilteredAverageTOFValue(tofMeasurements, SENSOR_TOF_CENTER);
   float tofLeft = getFilteredAverageTOFValue(tofMeasurements, SENSOR_TOF_LEFT);
 
+  float pitch = getMedianIMUPitchOrientationValue(imuMeasurements) - pitchZero;
+  float roll = getMedianIMURollOrientationValue(imuMeasurements) - rollZero;
+
 
   // Detect accitentally swallowed bottles
   if (proximityDetect > WANDER_DETECT_BOTTLE_THRESHOLD)
@@ -140,6 +148,10 @@ void stateWanderRoutine(int proximityMeasurements[SENSOR_PROXIMITY_COUNT][SENSOR
     proxDownLeftZero = proximityDownLeft;
     proxDownRightZero = proximityDownRight;
 
+    // Get current pitch and roll zero level
+    pitchZero = pitch;
+    rollZero = roll;
+
 
     // timestamp for offset
     offsetTimestamp = millis();
@@ -153,30 +165,6 @@ void stateWanderRoutine(int proximityMeasurements[SENSOR_PROXIMITY_COUNT][SENSOR
     // Set moving flag
     is_state = is_forward;
   }
-  // else if (is_state == is_open)
-  // {
-  //   // timestamp for offset
-  //   offsetTimestamp = millis();
-  //
-  //   if (flags[FLAG_ON_PLATFORM])
-  //   {
-  //     ignoreLeft = 1;
-  //     ignoreRight = 1;
-  //   }
-  //
-  //   if (millis() - openTimestamp > WANDER_OPEN_DURATION)
-  //   {
-  //     // Set default wandering speed
-  //     stopMotor(ACTUATOR_MOTOR_RIGHT, ACTUATOR_MOTOR_RIGHT_DIRECTION_PIN, ACTUATOR_MOTOR_RIGHT_SPEED_PIN);
-  //     stopMotor(ACTUATOR_MOTOR_LEFT, ACTUATOR_MOTOR_LEFT_DIRECTION_PIN, ACTUATOR_MOTOR_LEFT_SPEED_PIN);
-  //     motorSpeeds[ACTUATOR_MOTOR_RIGHT] = flags[FLAG_ON_PLATFORM] ? WANDER_PLATFORM_SPEED : WANDER_SPEED;
-  //     motorSpeeds[ACTUATOR_MOTOR_LEFT] = flags[FLAG_ON_PLATFORM] ? WANDER_PLATFORM_SPEED : WANDER_SPEED;
-  //     writeMotorSpeed(motorSpeeds, ACTUATOR_MOTOR_RIGHT, ACTUATOR_MOTOR_RIGHT_DIRECTION_PIN, ACTUATOR_MOTOR_RIGHT_SPEED_PIN);
-  //     writeMotorSpeed(motorSpeeds, ACTUATOR_MOTOR_LEFT, ACTUATOR_MOTOR_LEFT_DIRECTION_PIN, ACTUATOR_MOTOR_LEFT_SPEED_PIN);
-  //
-  //     is_state = is_forward;
-  //   }
-  // }
   else if (is_state == is_forward)
   {
     #ifdef SERIAL_ENABLE
@@ -202,6 +190,10 @@ void stateWanderRoutine(int proximityMeasurements[SENSOR_PROXIMITY_COUNT][SENSOR
     Serial.print(proximityDownRight);
     Serial.print(", ");
     Serial.print(proximityDetect);
+    Serial.print(" pitch: ");
+    Serial.print(pitch);
+    Serial.print(" roll: ");
+    Serial.print(roll);
     #endif
 
     if (ignoreRight)
@@ -232,9 +224,22 @@ void stateWanderRoutine(int proximityMeasurements[SENSOR_PROXIMITY_COUNT][SENSOR
       }
     }
 
-    if ((tofLeft < WANDER_TOF_LEFT__MOVING_THRESHOLD && tofLeft > 0) ||
-        (tofCenter < WANDER_TOF_CENTER__MOVING_THRESHOLD && tofCenter > 0) ||
-        (tofRight < WANDER_TOF_RIGHT__MOVING_THRESHOLD && tofRight > 0))
+    if (abs(roll) > WANDER_ROLL_THRESHOLD || abs(pitch) > WANDER_PITCH_THRESHOLD)
+    {
+      Serial.print(abs(pitch));
+      Serial.print(abs(roll));
+      Serial.print(abs(roll) > WANDER_ROLL_THRESHOLD || abs(pitch) > WANDER_PITCH_THRESHOLD);
+      // Stop motors
+      motorSpeeds[ACTUATOR_MOTOR_RIGHT] = 0;
+      motorSpeeds[ACTUATOR_MOTOR_LEFT] = 0;
+      writeMotorSpeed(motorSpeeds, ACTUATOR_MOTOR_RIGHT, ACTUATOR_MOTOR_RIGHT_DIRECTION_PIN, ACTUATOR_MOTOR_RIGHT_SPEED_PIN);
+      writeMotorSpeed(motorSpeeds, ACTUATOR_MOTOR_LEFT, ACTUATOR_MOTOR_LEFT_DIRECTION_PIN, ACTUATOR_MOTOR_LEFT_SPEED_PIN);
+
+      is_state = is_back_off_start;
+    }
+    else if ((tofLeft < WANDER_TOF_LEFT__MOVING_THRESHOLD && tofLeft > 0) ||
+             (tofCenter < WANDER_TOF_CENTER__MOVING_THRESHOLD && tofCenter > 0) ||
+             (tofRight < WANDER_TOF_RIGHT__MOVING_THRESHOLD && tofRight > 0))
     {
       // Stop motors
       motorSpeeds[ACTUATOR_MOTOR_RIGHT] = 0;

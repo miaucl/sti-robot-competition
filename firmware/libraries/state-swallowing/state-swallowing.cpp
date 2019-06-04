@@ -173,7 +173,7 @@ void stateSwallowingRoutine(int proximityMeasurements[SENSOR_PROXIMITY_COUNT][SE
       is_state = is_stopping;
     }
     else if ((abs(proximityDownLeft) > WANDER_PROXIMITY_DOWN_THRESHOLD ||
-             abs(proximityDownRight) > WANDER_PROXIMITY_DOWN_THRESHOLD) && flags[FLAG_ON_PLATFORM])
+             abs(proximityDownRight) > WANDER_PROXIMITY_DOWN_THRESHOLD))// && flags[FLAG_ON_PLATFORM])
     {
       #ifdef SERIAL_ENABLE
       Serial.print(" > down detection");
@@ -222,6 +222,8 @@ void stateSwallowingRoutine(int proximityMeasurements[SENSOR_PROXIMITY_COUNT][SE
       writeServoAngle(servoAngles, ACTUATOR_SERVO_BAR_RIGHT, ACTUATOR_SERVO_BAR_RIGHT_PIN);
       writeServoAngle(servoAngles, ACTUATOR_SERVO_BAR_LEFT, ACTUATOR_SERVO_BAR_LEFT_PIN);
 
+      flags[FLAG_STONES_DETECTED] = 1;
+
       is_state = is_stopping;
     }
   }
@@ -234,7 +236,11 @@ void stateSwallowingRoutine(int proximityMeasurements[SENSOR_PROXIMITY_COUNT][SE
       Serial.print("stopped and close");
       #endif
 
-      if(bottleInRobot == 1)
+      if (flags[FLAG_STONES_DETECTED])
+      {
+        is_state = is_off;
+      }
+      else if (bottleInRobot == 1)
       {
         #ifdef SERIAL_ENABLE
         Serial.print(" > bottle swallowed");
