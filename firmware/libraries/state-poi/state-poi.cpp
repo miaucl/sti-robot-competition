@@ -29,10 +29,32 @@ enum IState
   is_off
 };
 
-static float pois[2][2] = {{4.f, 4.f}, {6.f, 1.f}};
+static float pois[8][2] =
+{
+  {4.f, 4.f},
+  {6.f, 1.f},
+  {6.f, 1.f},
+  {4.f, 4.f},
+  {4.f, 4.f},
+  {4.f, 4.f},
+  {4.f, 4.f},
+  {4.f, 4.f}
+};
+
+static float poisPlatform[8][2] =
+{
+  {6.f, 6.5f},
+  {6.f, 6.5f},
+  {6.f, 6.5f},
+  {6.f, 6.5f},
+  {6.f, 6.5f},
+  {6.f, 6.5f},
+  {6.f, 6.5f},
+  {6.f, 6.5f},
+};
 
 static IState is_state = is_start;
-static int poiIndex = 1;
+static int poiIndex = -1;
 static float z = 0;
 static float error = 0;
 
@@ -47,6 +69,8 @@ void statePOIEnterRoutine(boolean ledState[LED_COUNT],
   ledState[LED_RUNNING] = HIGH;
 
   directionalSpeedCount = 0;
+  poiIndex++;
+  if (poiIndex >= 8) poiIndex = 0;
 
   is_state = is_start;
 }
@@ -109,8 +133,11 @@ void statePOIRoutine( int proximityMeasurements[SENSOR_PROXIMITY_COUNT][SENSOR_P
 
   else if (is_state == is_turn_start)
   {
-    float dx = pois[poiIndex][0] - estimatedPos(0);
-    float dy = pois[poiIndex][1] - estimatedPos(1);
+    float currentPoi[2] = {0};
+    currentPoi[0] = (flags[FLAG_ON_PLATFORM]) ? poisPlatform[poiIndex][0] : pois[poiIndex][0];
+    currentPoi[1] = (flags[FLAG_ON_PLATFORM]) ? poisPlatform[poiIndex][1] : pois[poiIndex][1];
+    float dx = currentPoi[0] - estimatedPos(0);
+    float dy = currentPoi[1] - estimatedPos(1);
     float desiredAngle = atan2(dy, dx) / M_PI * 180.f;
 
     #ifdef SERIAL_ENABLE
@@ -128,8 +155,11 @@ void statePOIRoutine( int proximityMeasurements[SENSOR_PROXIMITY_COUNT][SENSOR_P
   }
   else if (is_state == is_turning)
   {
-    float dx = pois[poiIndex][0] - estimatedPos(0);
-    float dy = pois[poiIndex][1] - estimatedPos(1);
+    float currentPoi[2] = {0};
+    currentPoi[0] = (flags[FLAG_ON_PLATFORM]) ? poisPlatform[poiIndex][0] : pois[poiIndex][0];
+    currentPoi[1] = (flags[FLAG_ON_PLATFORM]) ? poisPlatform[poiIndex][1] : pois[poiIndex][1];
+    float dx = currentPoi[0] - estimatedPos(0);
+    float dy = currentPoi[1] - estimatedPos(1);
     float desiredAngle = atan2(dy, dx) / M_PI * 180.f;
 
 
@@ -189,8 +219,11 @@ void statePOIRoutine( int proximityMeasurements[SENSOR_PROXIMITY_COUNT][SENSOR_P
   }
   else if (is_state == is_braitenberg)
   {
-    float dx = pois[poiIndex][0] - estimatedPos(0);
-    float dy = pois[poiIndex][1] - estimatedPos(1);
+    float currentPoi[2] = {0};
+    currentPoi[0] = (flags[FLAG_ON_PLATFORM]) ? poisPlatform[poiIndex][0] : pois[poiIndex][0];
+    currentPoi[1] = (flags[FLAG_ON_PLATFORM]) ? poisPlatform[poiIndex][1] : pois[poiIndex][1];
+    float dx = currentPoi[0] - estimatedPos(0);
+    float dy = currentPoi[1] - estimatedPos(1);
     float desiredAngle = atan2(dy, dx) / M_PI * 180.f;
 
     float rightSpeed = 0;

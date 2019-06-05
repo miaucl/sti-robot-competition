@@ -226,10 +226,13 @@ void stateReturningRoutine( int proximityMeasurements[SENSOR_PROXIMITY_COUNT][SE
       }
 
 
-      // Forward prox sensor
-      int proxForward = getAverageProximityValue(proximityMeasurements, SENSOR_PROXIMITY_FORWARD) - proximityAmbientMeasurements[SENSOR_PROXIMITY_FORWARD];
-      rightSpeed += RETURNING_BRAITENBERG_PROX_FORWARD_FACTOR * proxForward;
-      leftSpeed += RETURNING_BRAITENBERG_PROX_FORWARD_FACTOR * proxForward;
+      // Forward prox sensor (only if tof sees something)
+      if (tofCenter > 0)
+      {
+        int proxForward = getAverageProximityValue(proximityMeasurements, SENSOR_PROXIMITY_FORWARD) - proximityAmbientMeasurements[SENSOR_PROXIMITY_FORWARD];
+        rightSpeed += RETURNING_BRAITENBERG_PROX_FORWARD_FACTOR * proxForward;
+        leftSpeed += RETURNING_BRAITENBERG_PROX_FORWARD_FACTOR * proxForward;        
+      }
 
       // Forward prox left sensor
       int proxLeftForward = getAverageProximityValue(proximityMeasurements, SENSOR_PROXIMITY_FORWARD_LEFT) - proximityAmbientMeasurements[SENSOR_PROXIMITY_FORWARD_LEFT];

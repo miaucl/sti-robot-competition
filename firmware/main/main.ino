@@ -31,9 +31,9 @@
  */
 
 // Mode of the robot
-//int mode = m_random_navigation;
+int mode = m_random_navigation;
 //int mode = m_poi_navigation;
-int mode = m_platform;
+//int mode = m_platform;
 //int mode = m_collect;
 //int mode = m_test;
 

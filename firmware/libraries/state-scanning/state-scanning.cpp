@@ -200,28 +200,29 @@ void stateScanningRoutine(int proximityMeasurements[SENSOR_PROXIMITY_COUNT][SENS
       int tofLeft = getFilteredAverageTOFValue(tofMeasurements, SENSOR_TOF_LEFT);
 
 
-      // Serial.print(z);
-      // Serial.print(",");
-      // Serial.print(proxRight);
-      // Serial.print(",");
-      // Serial.print(proxForwardRight);
-      // Serial.print(",");
-      // Serial.print(proxForward);
-      // Serial.print(",");
-      // Serial.print(proxForwardLeft);
-      // Serial.print(",");
-      // Serial.print(proxLeft);
-      // Serial.print(",");
-      // Serial.print(proxDownLeft);
-      // Serial.print(",");
-      // Serial.print(proxDownRight);
-      // Serial.print(",");
-      // Serial.print(tofRight);
-      // Serial.print(",");
-      // Serial.print(tofCenter);
-      // Serial.print(",");
-      // Serial.print(tofLeft);
-      // Serial.println();
+      #ifdef SERIAL_ENABLE
+      Serial.print(",");
+      Serial.print(proxRight);
+      Serial.print(",");
+      Serial.print(proxForwardRight);
+      Serial.print(",");
+      Serial.print(proxForward);
+      Serial.print(",");
+      Serial.print(proxForwardLeft);
+      Serial.print(",");
+      Serial.print(proxLeft);
+      Serial.print(",");
+      Serial.print(proxDownLeft);
+      Serial.print(",");
+      Serial.print(proxDownRight);
+      Serial.print(",");
+      Serial.print(tofRight);
+      Serial.print(",");
+      Serial.print(tofCenter);
+      Serial.print(",");
+      Serial.print(tofLeft);
+      Serial.println();
+      #endif
 
       if (scanMaxProxRight < proxRight && SCANNING_PROX_THRESHOLD < proxRight)
       {
@@ -278,7 +279,7 @@ void stateScanningRoutine(int proximityMeasurements[SENSOR_PROXIMITY_COUNT][SENS
         Serial.print(",");
         Serial.print(scanMaxProxAngleRight);
         Serial.print(" MAX FR ");
-        Serial.print(scanMaxProxLeft);
+        Serial.print(scanMaxProxForwardLeft);
         Serial.print(",");
         Serial.print(scanMaxProxAngleForwardRight);
         Serial.print(" MAX F ");
@@ -313,43 +314,43 @@ void stateScanningRoutine(int proximityMeasurements[SENSOR_PROXIMITY_COUNT][SENS
         tofTargetAngle = 0;
 
         // Care for circularity of values (-pi,pi)
-        if (fabsf(proxTargetAngle - scanMaxProxAngleForward) < 180 && scanMaxProxForward > 0)
-        {
-          proxTargetAngle += scanMaxProxAngleForward;
-          proxCount++;
-        }
-        if (fabsf(proxTargetAngle - scanMaxProxAngleRight) < 180 && scanMaxProxRight > 0)
-        {
-          proxTargetAngle += scanMaxProxAngleRight;
-          proxCount++;
-        }
-        if (fabsf(proxTargetAngle - scanMaxProxAngleForwardRight) < 180 && scanMaxProxForwardRight > 0)
-        {
-          proxTargetAngle += scanMaxProxAngleForwardRight;
-          proxCount++;
-        }
-        if (fabsf(proxTargetAngle - scanMaxProxAngleForward) < 180 && scanMaxProxForwardLeft > 0)
-        {
-          proxTargetAngle += scanMaxProxAngleForward;
-          proxCount++;
-        }
-        if (fabsf(proxTargetAngle - scanMaxProxAngleLeft) < 180 && scanMaxProxLeft > 0)
+        if (scanMaxProxLeft > 0)
         {
           proxTargetAngle += scanMaxProxAngleLeft;
           proxCount++;
         }
+        if (scanMaxProxForwardLeft > 0)
+        {
+          proxTargetAngle += scanMaxProxAngleForwardLeft;
+          proxCount++;
+        }
+        if (scanMaxProxForward > 0)
+        {
+          proxTargetAngle += scanMaxProxAngleForward;
+          proxCount++;
+        }
+        if (scanMaxProxForwardRight > 0)
+        {
+          proxTargetAngle += scanMaxProxAngleRight;
+          proxCount++;
+        }
+        if (scanMaxProxRight > 0)
+        {
+          proxTargetAngle += scanMaxProxAngleRight;
+          proxCount++;
+        }
 
-        if (fabsf(tofTargetAngle - scanMinTOFAngleRight) < 180 && scanMinTOFRight < SCANNING_TOF_INF)
+        if (scanMinTOFRight < SCANNING_TOF_INF)
         {
           tofTargetAngle += scanMinTOFAngleRight;
           tofCount++;
         }
-        if (fabsf(tofTargetAngle - scanMinTOFAngleCenter) < 180 && scanMinTOFCenter < SCANNING_TOF_INF)
+        if (scanMinTOFCenter < SCANNING_TOF_INF)
         {
           tofTargetAngle += scanMinTOFAngleCenter;
           tofCount++;
         }
-        if (fabsf(tofTargetAngle - scanMinTOFAngleLeft) < 180 && scanMinTOFLeft < SCANNING_TOF_INF)
+        if (scanMinTOFLeft < SCANNING_TOF_INF)
         {
           tofTargetAngle += scanMinTOFAngleLeft;
           tofCount++;

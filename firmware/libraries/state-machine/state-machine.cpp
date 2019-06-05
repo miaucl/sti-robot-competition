@@ -576,8 +576,12 @@ State modePlatform( State currentState,
    */
   else if (currentState == s_following)
   {
+    if (nextState)
+    {
+      return s_following_slope;
+    }
     // Exit following state and enter turn state to follow corner
-    if ((flags[FLAG_FOLLOWING_CORNER_DETECTED] && stateTransitionAllowed) || nextState)
+    else if (flags[FLAG_FOLLOWING_CORNER_DETECTED] && stateTransitionAllowed)
     {
       stateEstimator->correctPos(CORRECT_FOLLOWING_X,CORRECT_FOLLOWING_Y);
 
@@ -603,7 +607,7 @@ State modePlatform( State currentState,
 
       flags[FLAG_ON_PLATFORM] = 1;
 
-      return s_wander;
+      return s_poi;
     }
   }
 
@@ -625,6 +629,21 @@ State modePlatform( State currentState,
       return s_following_slope;
     }
   }
+
+  /**
+   * Current state "s_poi"
+   */
+  else if (currentState == s_poi)
+  {
+    // Exit wander state and enter scanning state to check the element
+    if ((flags[FLAG_POI_REACHED] && stateTransitionAllowed) || nextState)
+    {
+      flags[FLAG_POI_REACHED] = 0;
+
+      return s_wander;
+    }
+  }
+
 
   /**
    * Current state "s_wander"
@@ -683,10 +702,17 @@ State modePlatform( State currentState,
     {
       return s_returning;
     }
-    // Exit turning state and enter following state to follow wall
+    // Exit turning state and scan again
     else if (flags[FLAG_SWALLOW_TIMEOUT] && stateTransitionAllowed)
     {
       flags[FLAG_SWALLOW_TIMEOUT] = 0;
+
+      return s_scanning;
+    }
+    // Exit turning state and scan again
+    else if (flags[FLAG_STONES_DETECTED] && stateTransitionAllowed)
+    {
+      flags[FLAG_STONES_DETECTED] = 0;
 
       return s_scanning;
     }
@@ -811,8 +837,12 @@ State modeCollect(State currentState,
    */
   else if (currentState == s_following)
   {
+    if (nextState)
+    {
+      return s_following_collect;
+    }
     // Exit following state and enter turn state to follow corner
-    if ((flags[FLAG_FOLLOWING_CORNER_DETECTED] && stateTransitionAllowed) || nextState)
+    else if (flags[FLAG_FOLLOWING_CORNER_DETECTED] && stateTransitionAllowed)
     {
       stateEstimator->correctPos(CORRECT_FOLLOWING_X,CORRECT_FOLLOWING_Y);
 
@@ -875,6 +905,8 @@ State modeCollect(State currentState,
     {
       flags[FLAG_RETURNED] = 0;
       flags[FLAG_RESET_ROBOT] = 1;
+
+      flags[FLAG_TURN_ONE_AND_A_HALF] = 1;
 
       return s_turning;
     }

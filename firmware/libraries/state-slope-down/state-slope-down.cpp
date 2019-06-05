@@ -15,7 +15,7 @@ enum IState
 {
   is_start,
   is_following_wall,
-  is_stopping_in_front_of_slope,
+  is_stopping_in_forward_of_slope,
   is_open,
   is_move_back,
   is_move_back_stopping,
@@ -37,6 +37,7 @@ static int wallFarMotorSpeedPin = 0;
 
 static float proxDownLeftZero = 0;
 static float proxDownRightZero = 0;
+static float proxForwardZero = 0;
 
 static boolean bottleDelivered = 0;
 
@@ -164,17 +165,22 @@ void stateSlopeDownRoutine( int proximityMeasurements[SENSOR_PROXIMITY_COUNT][SE
   {
     float proxDownLeft = getAverageProximityValue(proximityMeasurements, SENSOR_PROXIMITY_DOWN_LEFT) - proximityAmbientMeasurements[SENSOR_PROXIMITY_DOWN_LEFT] - proxDownLeftZero;
     float proxDownRight = getAverageProximityValue(proximityMeasurements, SENSOR_PROXIMITY_DOWN_RIGHT) - proximityAmbientMeasurements[SENSOR_PROXIMITY_DOWN_RIGHT] - proxDownRightZero;
+    float proxForward = getAverageProximityValue(proximityMeasurements, SENSOR_PROXIMITY_FORWARD) - proximityAmbientMeasurements[SENSOR_PROXIMITY_FORWARD] - proxForwardZero;
 
     #ifdef SERIAL_ENABLE
     Serial.print("\tprox d: ");
     Serial.print(proxDownLeft);
     Serial.print(", ");
     Serial.print(proxDownRight);
+    Serial.print("\t forward: ");
+    Serial.print(proxDownRight);
     #endif
 
 
 
-    if (-proxDownLeft > SLOPE_DOWN_PROXIMITY_DOWN_THRESHOLD || -proxDownRight > SLOPE_DOWN_PROXIMITY_DOWN_THRESHOLD)
+    if (-proxDownLeft > SLOPE_DOWN_PROXIMITY_DOWN_THRESHOLD ||
+        -proxDownRight > SLOPE_DOWN_PROXIMITY_DOWN_THRESHOLD ||
+        proxForward < -SLOPE_DOWN_PROXIMITY_FORWARD_THRESHOLD)
     {
       #ifdef SERIAL_ENABLE
       Serial.print("slope detected");
@@ -186,7 +192,7 @@ void stateSlopeDownRoutine( int proximityMeasurements[SENSOR_PROXIMITY_COUNT][SE
       writeMotorSpeed(motorSpeeds, ACTUATOR_MOTOR_RIGHT, ACTUATOR_MOTOR_RIGHT_DIRECTION_PIN, ACTUATOR_MOTOR_RIGHT_SPEED_PIN);
       writeMotorSpeed(motorSpeeds, ACTUATOR_MOTOR_LEFT, ACTUATOR_MOTOR_LEFT_DIRECTION_PIN, ACTUATOR_MOTOR_LEFT_SPEED_PIN);
 
-      is_state = is_stopping_in_front_of_slope;
+      is_state = is_stopping_in_forward_of_slope;
     }
     else
     {
@@ -230,7 +236,7 @@ void stateSlopeDownRoutine( int proximityMeasurements[SENSOR_PROXIMITY_COUNT][SE
       writeRawMotorSpeed(motorSpeeds, wallFarMotor, wallFarMotorDirectionPin, wallFarMotorSpeedPin);
     }
   }
-  else if (is_state == is_stopping_in_front_of_slope)
+  else if (is_state == is_stopping_in_forward_of_slope)
   {
     if (motorSpeedMeasurements[ACTUATOR_MOTOR_LEFT] < SLOPE_DOWN_STOPPING_THRESHOLD &&
         motorSpeedMeasurements[ACTUATOR_MOTOR_RIGHT] < SLOPE_DOWN_STOPPING_THRESHOLD)

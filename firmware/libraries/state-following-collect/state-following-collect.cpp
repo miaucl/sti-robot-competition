@@ -43,6 +43,10 @@ static int proxForwardLeftZero = 0;
 static int proxForwardZero = 0;
 static int proxForwardRightZero = 0;
 
+static float shakyAngleZero = 0;
+static float shakyOn = 0;
+static float shakyLeft = 0;
+
 static long timestamp = 0;
 
 
@@ -276,16 +280,18 @@ void stateFollowingCollectRoutine(int proximityMeasurements[SENSOR_PROXIMITY_COU
       proxForwardZero = getAverageProximityValue(proximityMeasurements, SENSOR_PROXIMITY_FORWARD) - proximityAmbientMeasurements[SENSOR_PROXIMITY_FORWARD];
       proxForwardLeftZero = getAverageProximityValue(proximityMeasurements, SENSOR_PROXIMITY_FORWARD_RIGHT) - proximityAmbientMeasurements[SENSOR_PROXIMITY_FORWARD_RIGHT];
 
+      shakyAngleZero = estimatedAngle;
+
       is_state = is_waiting;
     }
   }
   else if (is_state == is_waiting)
   {
-    int proxDetect = getAverageProximityValue(proximityMeasurements, SENSOR_PROXIMITY_DETECT) - proximityAmbientMeasurements[SENSOR_PROXIMITY_DETECT] - proxDetect;
+    int proxDetect = getAverageProximityValue(proximityMeasurements, SENSOR_PROXIMITY_DETECT) - proximityAmbientMeasurements[SENSOR_PROXIMITY_DETECT] - proxDetectZero;
 
-    int proxForwardLeft = getAverageProximityValue(proximityMeasurements, SENSOR_PROXIMITY_FORWARD_LEFT) - proximityAmbientMeasurements[SENSOR_PROXIMITY_FORWARD_LEFT] - proxForwardLeft;
-    int proxForward = getAverageProximityValue(proximityMeasurements, SENSOR_PROXIMITY_FORWARD) - proximityAmbientMeasurements[SENSOR_PROXIMITY_FORWARD] - proxForward;
-    int proxForwardRight = getAverageProximityValue(proximityMeasurements, SENSOR_PROXIMITY_FORWARD_RIGHT) - proximityAmbientMeasurements[SENSOR_PROXIMITY_FORWARD_RIGHT] - proxForwardRight;
+    int proxForwardLeft = getAverageProximityValue(proximityMeasurements, SENSOR_PROXIMITY_FORWARD_LEFT) - proximityAmbientMeasurements[SENSOR_PROXIMITY_FORWARD_LEFT] - proxForwardLeftZero;
+    int proxForward = getAverageProximityValue(proximityMeasurements, SENSOR_PROXIMITY_FORWARD) - proximityAmbientMeasurements[SENSOR_PROXIMITY_FORWARD] - proxForwardZero;
+    int proxForwardRight = getAverageProximityValue(proximityMeasurements, SENSOR_PROXIMITY_FORWARD_RIGHT) - proximityAmbientMeasurements[SENSOR_PROXIMITY_FORWARD_RIGHT] - proxForwardRightZero;
 
     #ifdef SERIAL_ENABLE
     Serial.print("prox: ");
@@ -314,6 +320,42 @@ void stateFollowingCollectRoutine(int proximityMeasurements[SENSOR_PROXIMITY_COU
       timestamp = millis();
 
       is_state = is_backward;
+    }
+    else if ( proxForwardLeft > FOLLOWING_WALL_DETECT_THRESHOLD ||
+              proxForward > FOLLOWING_WALL_DETECT_THRESHOLD ||
+              proxForwardRight > FOLLOWING_WALL_DETECT_THRESHOLD)
+    {
+      shakyOn = true;
+    }
+    else
+    {
+      float error = 0;
+      if (shakyLeft) error = wrapPI(shakyAngleZero + FOLLOWING_WALL_COLLECT_SHAKY_ANGLE - estimatedAngle);
+      else error = wrapPI(shakyAngleZero - FOLLOWING_WALL_COLLECT_SHAKY_ANGLE - estimatedAngle);
+      float turningSpeed = error * FOLLOWING_WALL_COLLECT_SHAKY_REACTIVITY;
+      turningSpeed = max(turningSpeed, -FOLLOWING_WALL_COLLECT_SHAKY_MAX_SPEED);
+      turningSpeed = min(turningSpeed, FOLLOWING_WALL_COLLECT_SHAKY_MAX_SPEED);
+      #ifdef SERIAL_ENABLE
+      Serial.print("shaking: ");
+      Serial.print(error);
+      Serial.print(", ");
+      Serial.print(turningSpeed);
+      #endif
+
+      motorSpeeds[ACTUATOR_MOTOR_RIGHT] = turningSpeed;
+      motorSpeeds[ACTUATOR_MOTOR_LEFT] = -turningSpeed;
+      writeRawMotorSpeed(motorSpeeds, ACTUATOR_MOTOR_RIGHT, ACTUATOR_MOTOR_RIGHT_DIRECTION_PIN, ACTUATOR_MOTOR_RIGHT_SPEED_PIN);
+      writeRawMotorSpeed(motorSpeeds, ACTUATOR_MOTOR_LEFT, ACTUATOR_MOTOR_LEFT_DIRECTION_PIN, ACTUATOR_MOTOR_LEFT_SPEED_PIN);
+
+      if (fabsf(error) < FOLLOWING_WALL_COLLECT_SHAKY_STOPPING_THRESHOLD)
+      {
+        #ifdef SERIAL_ENABLE
+        Serial.print(" > shaky inverse");
+        #endif
+
+        shakyLeft = !shakyLeft;
+        shakyOn = false;
+      }
     }
   }
   else if (is_state == is_backward)

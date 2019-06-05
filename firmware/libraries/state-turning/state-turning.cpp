@@ -102,6 +102,10 @@ void stateTurningRoutine(float imuMeasurements[SENSOR_IMU_MEASUREMENT_DIMENSIONS
         zDelta = -TURNING_ANGLE;
     }
 
+    if (flags[FLAG_TURN_ONE_AND_A_HALF])
+    {
+      zDelta *= 1.5;
+    }
     if (flags[FLAG_TURN_DOUBLE])
     {
       zDelta *= 2;
