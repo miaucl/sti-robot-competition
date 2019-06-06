@@ -10,6 +10,8 @@
 #include "sensors.h"
 #include "actuators.h"
 
+#define USE_RIGHT_WALL 1
+
 // Internal control flags
 enum IState
 {
@@ -102,7 +104,8 @@ void stateFollowingSlopeRoutine(int proximityMeasurements[SENSOR_PROXIMITY_COUNT
       #endif
 
       // determine if wall on the left or right is to follow
-      if (proxLookRight > proxLookLeft)
+      //if (proxLookRight > proxLookLeft)
+      if (USE_RIGHT_WALL)
       {
         #ifdef SERIAL_ENABLE
         Serial.print(" > wall: right");

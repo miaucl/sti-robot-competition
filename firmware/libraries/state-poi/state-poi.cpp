@@ -26,32 +26,10 @@ enum IState
   is_turning,
   is_turn_stopping,
   is_braitenberg,
+  is_stopping,
   is_off
 };
 
-static float pois[8][2] =
-{
-  {4.f, 4.f},
-  {6.f, 1.f},
-  {6.f, 1.f},
-  {4.f, 4.f},
-  {4.f, 4.f},
-  {4.f, 4.f},
-  {4.f, 4.f},
-  {4.f, 4.f}
-};
-
-static float poisPlatform[8][2] =
-{
-  {6.f, 6.5f},
-  {6.f, 6.5f},
-  {6.f, 6.5f},
-  {6.f, 6.5f},
-  {6.f, 6.5f},
-  {6.f, 6.5f},
-  {6.f, 6.5f},
-  {6.f, 6.5f},
-};
 
 static IState is_state = is_start;
 static int poiIndex = -1;
@@ -134,8 +112,8 @@ void statePOIRoutine( int proximityMeasurements[SENSOR_PROXIMITY_COUNT][SENSOR_P
   else if (is_state == is_turn_start)
   {
     float currentPoi[2] = {0};
-    currentPoi[0] = (flags[FLAG_ON_PLATFORM]) ? poisPlatform[poiIndex][0] : pois[poiIndex][0];
-    currentPoi[1] = (flags[FLAG_ON_PLATFORM]) ? poisPlatform[poiIndex][1] : pois[poiIndex][1];
+    currentPoi[0] = (flags[FLAG_ON_PLATFORM]) ? POIS_PLATFORM[poiIndex][0] : POIS[poiIndex][0];
+    currentPoi[1] = (flags[FLAG_ON_PLATFORM]) ? POIS_PLATFORM[poiIndex][1] : POIS[poiIndex][1];
     float dx = currentPoi[0] - estimatedPos(0);
     float dy = currentPoi[1] - estimatedPos(1);
     float desiredAngle = atan2(dy, dx) / M_PI * 180.f;
@@ -156,8 +134,8 @@ void statePOIRoutine( int proximityMeasurements[SENSOR_PROXIMITY_COUNT][SENSOR_P
   else if (is_state == is_turning)
   {
     float currentPoi[2] = {0};
-    currentPoi[0] = (flags[FLAG_ON_PLATFORM]) ? poisPlatform[poiIndex][0] : pois[poiIndex][0];
-    currentPoi[1] = (flags[FLAG_ON_PLATFORM]) ? poisPlatform[poiIndex][1] : pois[poiIndex][1];
+    currentPoi[0] = (flags[FLAG_ON_PLATFORM]) ? POIS_PLATFORM[poiIndex][0] : POIS[poiIndex][0];
+    currentPoi[1] = (flags[FLAG_ON_PLATFORM]) ? POIS_PLATFORM[poiIndex][1] : POIS[poiIndex][1];
     float dx = currentPoi[0] - estimatedPos(0);
     float dy = currentPoi[1] - estimatedPos(1);
     float desiredAngle = atan2(dy, dx) / M_PI * 180.f;
@@ -220,8 +198,8 @@ void statePOIRoutine( int proximityMeasurements[SENSOR_PROXIMITY_COUNT][SENSOR_P
   else if (is_state == is_braitenberg)
   {
     float currentPoi[2] = {0};
-    currentPoi[0] = (flags[FLAG_ON_PLATFORM]) ? poisPlatform[poiIndex][0] : pois[poiIndex][0];
-    currentPoi[1] = (flags[FLAG_ON_PLATFORM]) ? poisPlatform[poiIndex][1] : pois[poiIndex][1];
+    currentPoi[0] = (flags[FLAG_ON_PLATFORM]) ? POIS_PLATFORM[poiIndex][0] : POIS[poiIndex][0];
+    currentPoi[1] = (flags[FLAG_ON_PLATFORM]) ? POIS_PLATFORM[poiIndex][1] : POIS[poiIndex][1];
     float dx = currentPoi[0] - estimatedPos(0);
     float dy = currentPoi[1] - estimatedPos(1);
     float desiredAngle = atan2(dy, dx) / M_PI * 180.f;
@@ -335,9 +313,7 @@ void statePOIRoutine( int proximityMeasurements[SENSOR_PROXIMITY_COUNT][SENSOR_P
       writeMotorSpeed(motorSpeeds, ACTUATOR_MOTOR_RIGHT, ACTUATOR_MOTOR_RIGHT_DIRECTION_PIN, ACTUATOR_MOTOR_RIGHT_SPEED_PIN);
       writeMotorSpeed(motorSpeeds, ACTUATOR_MOTOR_LEFT, ACTUATOR_MOTOR_LEFT_DIRECTION_PIN, ACTUATOR_MOTOR_LEFT_SPEED_PIN);
 
-      flags[FLAG_POI_REACHED] = 1;
-
-      is_state = is_off;
+      is_state = is_stopping;
     }
     // No directional speed
     else if (millis() - braitenbergTimestamp > POI_BRAITENBERG_THRESHOLD &&
@@ -356,9 +332,7 @@ void statePOIRoutine( int proximityMeasurements[SENSOR_PROXIMITY_COUNT][SENSOR_P
         writeMotorSpeed(motorSpeeds, ACTUATOR_MOTOR_RIGHT, ACTUATOR_MOTOR_RIGHT_DIRECTION_PIN, ACTUATOR_MOTOR_RIGHT_SPEED_PIN);
         writeMotorSpeed(motorSpeeds, ACTUATOR_MOTOR_LEFT, ACTUATOR_MOTOR_LEFT_DIRECTION_PIN, ACTUATOR_MOTOR_LEFT_SPEED_PIN);
 
-        flags[FLAG_POI_REACHED] = 1;
-
-        is_state = is_off;
+        is_state = is_stopping;
       }
     }
     else
@@ -366,6 +340,22 @@ void statePOIRoutine( int proximityMeasurements[SENSOR_PROXIMITY_COUNT][SENSOR_P
       directionalSpeedCount = 0;
     }
   }
+  else if (is_state == is_stopping)
+  {
+
+    if (fabsf(motorSpeedMeasurements[ACTUATOR_MOTOR_LEFT]) < POI_STOPPING_THRESHOLD &&
+        fabsf(motorSpeedMeasurements[ACTUATOR_MOTOR_RIGHT]) < POI_STOPPING_THRESHOLD)
+    {
+      #ifdef SERIAL_ENABLE
+      Serial.print(" stopped");
+      #endif
+
+      flags[FLAG_POI_REACHED] = 1;
+
+      is_state = is_off;
+    }
+  }
+
 
   #ifdef SERIAL_ENABLE
   Serial.println();

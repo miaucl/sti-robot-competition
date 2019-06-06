@@ -19,6 +19,7 @@ void stateReturningRoutine( int proximityMeasurements[SENSOR_PROXIMITY_COUNT][SE
                             int proximityAmbientVarianceMeasurements[SENSOR_PROXIMITY_COUNT],
                             int tofMeasurements[SENSOR_TOF_COUNT][SENSOR_TOF_MEASUREMENT_COUNT],
                             float estimatedAngle,
+                            Matrix<2> estimatedPos,
                             double motorSpeeds[ACTUATOR_MOTOR_COUNT],
                             double motorSpeedMeasurements[ACTUATOR_MOTOR_COUNT],
                             boolean btnState[BTN_COUNT],

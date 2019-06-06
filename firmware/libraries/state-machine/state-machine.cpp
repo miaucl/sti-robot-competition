@@ -316,6 +316,8 @@ State modePOINavigation(State currentState,
   }
   #endif
 
+  flags[FLAG_POI_NAVIGATION] = 1;
+
   /**
    * Current state "s_initialization"
    */
@@ -876,6 +878,7 @@ State modeCollect(State currentState,
     {
       flags[FLAG_TURN_FINISHED] = 0;
       flags[FLAG_RESET_ROBOT] = 0;
+      flags[FLAG_TURN_ONE_AND_A_HALF] = 0;
 
       return s_following;
     }

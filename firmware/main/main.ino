@@ -25,14 +25,13 @@
 #include "state-poi.h"
 
 
-
 /*********
  * Global values
  */
 
 // Mode of the robot
-int mode = m_random_navigation;
-//int mode = m_poi_navigation;
+//int mode = m_random_navigation;
+int mode = m_poi_navigation;
 //int mode = m_platform;
 //int mode = m_collect;
 //int mode = m_test;
@@ -157,7 +156,7 @@ void configuration()
   setServoAngle(servoAngles, ACTUATOR_SERVO_BAR_RIGHT, ACTUATOR_SERVO_BAR_RIGHT_PIN);
   setServoAngle(servoAngles, ACTUATOR_SERVO_BAR_LEFT, ACTUATOR_SERVO_BAR_LEFT_PIN);
 
-  Matrix<3> x0 = {0.5,0.5,0};
+  Matrix<3> x0 = {INIT_POS_X,INIT_POS_Y,0};
   estimator.init(x0);
 }
 
@@ -961,6 +960,7 @@ void stateReturning()
                         proximityAmbientVarianceMeasurements,
                         tofMeasurements,
                         estimator.getAngle(),
+                        estimator.getPosition(),
                         motorSpeeds,
                         motorSpeedMeasurements,
                         btnState,
@@ -1008,7 +1008,7 @@ void stateEmptyingExit()
 
 
 // ================================================================
-// ===                      RETURNING STATE                     ===
+// ===                         POI STATE                        ===
 // ================================================================
 
 

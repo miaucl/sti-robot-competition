@@ -10,6 +10,8 @@
 #include "sensors.h"
 #include "actuators.h"
 
+#define USE_RIGHT_WALL 1
+
 // Internal control flags
 enum IState
 {
@@ -42,10 +44,6 @@ static int proxDetectZero = 0;
 static int proxForwardLeftZero = 0;
 static int proxForwardZero = 0;
 static int proxForwardRightZero = 0;
-
-static float shakyAngleZero = 0;
-static float shakyOn = 0;
-static float shakyLeft = 0;
 
 static long timestamp = 0;
 
@@ -104,6 +102,9 @@ void stateFollowingCollectRoutine(int proximityMeasurements[SENSOR_PROXIMITY_COU
     int proxLookLeft = getAverageProximityValue(proximityMeasurements, SENSOR_PROXIMITY_LEFT) - proximityAmbientMeasurements[SENSOR_PROXIMITY_LEFT];
     int proxLookRight = getAverageProximityValue(proximityMeasurements, SENSOR_PROXIMITY_RIGHT) - proximityAmbientMeasurements[SENSOR_PROXIMITY_RIGHT];
 
+    proxDetectZero = getAverageProximityValue(proximityMeasurements, SENSOR_PROXIMITY_DETECT) - proximityAmbientMeasurements[SENSOR_PROXIMITY_DETECT];
+
+
     if (proxLookLeft > 0 || proxLookRight > 0)
     {
       #ifdef SERIAL_ENABLE
@@ -114,7 +115,8 @@ void stateFollowingCollectRoutine(int proximityMeasurements[SENSOR_PROXIMITY_COU
       #endif
 
       // determine if wall on the left or right is to follow
-      if (proxLookRight > proxLookLeft)
+      //if (proxLookRight > proxLookLeft)
+      if (USE_RIGHT_WALL)
       {
         #ifdef SERIAL_ENABLE
         Serial.print(" > wall: right");
@@ -275,12 +277,9 @@ void stateFollowingCollectRoutine(int proximityMeasurements[SENSOR_PROXIMITY_COU
       Serial.print("forward stopped");
       #endif
 
-      proxDetectZero = getAverageProximityValue(proximityMeasurements, SENSOR_PROXIMITY_DETECT) - proximityAmbientMeasurements[SENSOR_PROXIMITY_DETECT];
       proxForwardLeftZero = getAverageProximityValue(proximityMeasurements, SENSOR_PROXIMITY_FORWARD_RIGHT) - proximityAmbientMeasurements[SENSOR_PROXIMITY_FORWARD_RIGHT];
       proxForwardZero = getAverageProximityValue(proximityMeasurements, SENSOR_PROXIMITY_FORWARD) - proximityAmbientMeasurements[SENSOR_PROXIMITY_FORWARD];
       proxForwardLeftZero = getAverageProximityValue(proximityMeasurements, SENSOR_PROXIMITY_FORWARD_RIGHT) - proximityAmbientMeasurements[SENSOR_PROXIMITY_FORWARD_RIGHT];
-
-      shakyAngleZero = estimatedAngle;
 
       is_state = is_waiting;
     }
@@ -306,6 +305,10 @@ void stateFollowingCollectRoutine(int proximityMeasurements[SENSOR_PROXIMITY_COU
 
     if (proxDetect > FOLLOWING_WALL_DETECT_THRESHOLD)
     {
+      delay(300); // <-- DIRTY HACK!!!!
+
+
+
       // Close
       servoAngles[ACTUATOR_SERVO_BAR_RIGHT] = ACTUATOR_SERVO_BAR_RIGHT_CLOSED;
       servoAngles[ACTUATOR_SERVO_BAR_LEFT] = ACTUATOR_SERVO_BAR_LEFT_CLOSED;
@@ -320,42 +323,6 @@ void stateFollowingCollectRoutine(int proximityMeasurements[SENSOR_PROXIMITY_COU
       timestamp = millis();
 
       is_state = is_backward;
-    }
-    else if ( proxForwardLeft > FOLLOWING_WALL_DETECT_THRESHOLD ||
-              proxForward > FOLLOWING_WALL_DETECT_THRESHOLD ||
-              proxForwardRight > FOLLOWING_WALL_DETECT_THRESHOLD)
-    {
-      shakyOn = true;
-    }
-    else
-    {
-      float error = 0;
-      if (shakyLeft) error = wrapPI(shakyAngleZero + FOLLOWING_WALL_COLLECT_SHAKY_ANGLE - estimatedAngle);
-      else error = wrapPI(shakyAngleZero - FOLLOWING_WALL_COLLECT_SHAKY_ANGLE - estimatedAngle);
-      float turningSpeed = error * FOLLOWING_WALL_COLLECT_SHAKY_REACTIVITY;
-      turningSpeed = max(turningSpeed, -FOLLOWING_WALL_COLLECT_SHAKY_MAX_SPEED);
-      turningSpeed = min(turningSpeed, FOLLOWING_WALL_COLLECT_SHAKY_MAX_SPEED);
-      #ifdef SERIAL_ENABLE
-      Serial.print("shaking: ");
-      Serial.print(error);
-      Serial.print(", ");
-      Serial.print(turningSpeed);
-      #endif
-
-      motorSpeeds[ACTUATOR_MOTOR_RIGHT] = turningSpeed;
-      motorSpeeds[ACTUATOR_MOTOR_LEFT] = -turningSpeed;
-      writeRawMotorSpeed(motorSpeeds, ACTUATOR_MOTOR_RIGHT, ACTUATOR_MOTOR_RIGHT_DIRECTION_PIN, ACTUATOR_MOTOR_RIGHT_SPEED_PIN);
-      writeRawMotorSpeed(motorSpeeds, ACTUATOR_MOTOR_LEFT, ACTUATOR_MOTOR_LEFT_DIRECTION_PIN, ACTUATOR_MOTOR_LEFT_SPEED_PIN);
-
-      if (fabsf(error) < FOLLOWING_WALL_COLLECT_SHAKY_STOPPING_THRESHOLD)
-      {
-        #ifdef SERIAL_ENABLE
-        Serial.print(" > shaky inverse");
-        #endif
-
-        shakyLeft = !shakyLeft;
-        shakyOn = false;
-      }
     }
   }
   else if (is_state == is_backward)
