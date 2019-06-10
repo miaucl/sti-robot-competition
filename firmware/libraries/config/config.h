@@ -34,8 +34,8 @@
 
 /* Sensors */
 #define SENSOR_PROXIMITY_COUNT 10
-#define SENSOR_PROXIMITY_CALIBRATION_COUNT 40
-#define SENSOR_PROXIMITY_MEASUREMENT_COUNT 16
+#define SENSOR_PROXIMITY_CALIBRATION_COUNT 12
+#define SENSOR_PROXIMITY_MEASUREMENT_COUNT 6
 #define SENSOR_PROXIMITY_THRESHOLD 400
 #define SENSOR_PROXIMITY_RIGHT 0
 #define SENSOR_PROXIMITY_RIGHT_OFFSET 90
@@ -117,8 +117,11 @@
 
 #define ACTUATOR_SERVO_BAR_RIGHT_OPEN 38
 #define ACTUATOR_SERVO_BAR_RIGHT_CLOSED 12
+#define ACTUATOR_SERVO_BAR_RIGHT_RAMP 18
 #define ACTUATOR_SERVO_BAR_LEFT_OPEN 142
 #define ACTUATOR_SERVO_BAR_LEFT_CLOSED 168
+#define ACTUATOR_SERVO_BAR_LEFT_RAMP 162
+
 
 #define FLAG_COUNT 21
 #define FLAG_EEPROM 0
@@ -218,13 +221,14 @@ enum State
   s_scanning,             //5 Look for bottles (obstacles) in close range
   s_following,            //6 Follow a wall
   s_following_slope,      //7 Follow a wall and go up the slope
-  s_following_collect,    //8 Follow a wall and wait at the slope
-  s_slope_down,           //9 Try to go down the slope
-  s_swallowing,           //10 Turning to have bottle in front and swallowing bottle
-  s_turning,              //11 Turns a given angle
-  s_returning,            //12 Returns to the recycling zone
-  s_emptying,             //13 Empty the robot
-  s_poi,                  //14 Go to a point of intereset
+  s_following_slope_drop, //8 Follow a wall and go down the slope
+  s_following_collect,    //9 Follow a wall and wait at the slope
+  s_slope_down,           //10 Try to go down the slope
+  s_swallowing,           //11 Turning to have bottle in front and swallowing bottle
+  s_turning,              //12 Turns a given angle
+  s_returning,            //13 Returns to the recycling zone
+  s_emptying,             //14 Empty the robot
+  s_poi,                  //15 Go to a point of intereset
 
   s_panic                 // Panic state, when something unexpected happened
 };
@@ -236,11 +240,12 @@ enum Mode
 {
   m_random_navigation,     //0 Wander randomly to find bottles in the field
   m_poi_navigation,        //1 Go to POI and search for bottles on the way there
-  m_platform,              //2 Go on the platform and search bottles there
-  m_collect,               //3 Go to the platform and receive bottles
-  m_test                   //4 Testing mode
+  m_platform_navigation,   //2 Got to the platform, do navigation and return
+  m_platform,              //3 Go on the platform and search bottles there
+  m_collect,               //4 Go to the platform and receive bottles
+  m_test                   //5 Testing mode
 };
-#define MODE_LENGTH 5
+#define MODE_LENGTH 6
 
 // s_wander
 #define WANDER_SPEED 0.4f
@@ -258,7 +263,7 @@ enum Mode
 #define WANDER_PROXIMITY_THRESHOLD 100
 #define WANDER_PROXIMITY_SIDE_THRESHOLD 120
 #define WANDER_PROXIMITY_HIGH_THRESHOLD 300
-#define WANDER_PROXIMITY_DOWN_THRESHOLD 80
+#define WANDER_PROXIMITY_DOWN_THRESHOLD 100
 #define WANDER_OFFSET 2000
 #define WANDER_OPEN_DURATION 500
 #define WANDER_DETECT_BOTTLE_THRESHOLD 240
@@ -296,6 +301,18 @@ enum Mode
 #define FOLLOWING_WALL_BACKWARD_SPEED 0.9f
 #define FOLLOWING_WALL_FORWARD_DURATION 1400
 #define FOLLOWING_WALL_BACKWARD_DURATION 1400
+#define FOLLOWING_DROP_SPEED 1.2
+#define FOLLOWING_DROP_DURATION 4000
+#define FOLLOWING_DROP_REACTIVITY 0.004
+#define FOLLOWING_DROP_DESIRED_WALL_DISTANCE 120
+#define FOLLOWING_DROP_MAX_SPEED 0.2f
+#define FOLLOWING_DROP_MIN_SPEED 0.15f
+#define FOLLOWING_DROP_ANGLE -90.f
+#define FOLLOWING_DROP_TURNING_STOPPING_THRESHOLD 5.f
+#define FOLLOWING_DROP_PITCH_THRESHOLD 3.f
+#define FOLLOWING_DROP_ROLL_THRESHOLD 3.f
+#define FOLLOWING_DROP_WIGGLE_DURATION 2000
+#define FOLLOWING_DROP_WIGGLE_SPEED 1.5f
 
 // s_slope_down
 #define SLOPE_DOWN_MAX_SPEED 0.4f
@@ -308,12 +325,13 @@ enum Mode
 #define SLOPE_DOWN_REACTIVITY 0.001
 #define SLOPE_DOWN_STOPPING_THRESHOLD 0.001
 #define SLOPE_DOWN_PROXIMITY_DOWN_THRESHOLD 50
-#define SLOPE_DOWN_PROXIMITY_FORWARD_THRESHOLD 70
+#define SLOPE_DOWN_PROXIMITY_FORWARD_THRESHOLD 120
 #define SLOPE_DOWN_BACK_SPEED 0.3f
 #define SLOPE_DOWN_BACK_DURATION 3000
 #define SLOPE_DOWN_BACK_DURATION_DELIVERED 3000
 #define SLOPE_DOWN_FORWARD_SPEED 1.2f
 #define SLOPE_DOWN_FORWARD_DURATION 1200
+#define FOLLOWING_DROP_REACTIVITY 0.01
 
 
 // s_swallowing
@@ -323,7 +341,7 @@ enum Mode
 #define SWALLOWING_DURATION_OFFSET 500
 #define SWALLOWING_DURATION 5000
 #define SWALLOWING_BOTTLE_DETECTION_THRESHOLD 160
-#define SWALLOWING_PROXIMITY_DOWN_THRESHOLD 50
+#define SWALLOWING_PROXIMITY_DOWN_THRESHOLD 80
 #define SWALLOWING_BACK_OFF_DURATION 4000
 
 // s_scanning
@@ -356,7 +374,9 @@ enum Mode
 #define RETURNING_TARGET_ANGLE -135.f
 #define RETURNING_TARGET_ANGLE_PLATFORM 60.f
 #define RETURNING_TARGET_ANGLE_PLATFORM_DEPART -90.f
-#define RETURNING_STOPPING_THRESHOLD 15.f
+#define RETURNING_TARGET_CLOSE_ANGLE -90.f
+#define RETURNING_TARGET_CLOSE_ANGLE_PLATFORM 0.f
+#define RETURNING_STOPPING_THRESHOLD 5.f
 #define RETURNING_TURNING_STOPPING_THRESHOLD 0.001f
 #define RETURNING_TURNING_REACTIVITY 0.01
 #define RETURNING_TURNING_MAX_SPEED 0.5f
@@ -383,7 +403,10 @@ enum Mode
 #define RETURNING_BRAITENBERG_STOPPING_COUNT 16
 #define RETURNING_BRAITENBERG_ZONE_TIMEOUT 7000
 #define RETURNING_GO_CLOSE_SPEED 0.2f
-#define RETURNING_GO_CLOSE_FRONT_THRESHOLD 200.f
+#define RETURNING_GO_CLOSE_FRONT_THRESHOLD 150.f
+#define RETURNING_GO_CLOSE_TIMEOUT 2000.f
+#define RETURNING_STRAIGHT_SPEED 0.4
+#define RETURNING_STRAIGHT_THRESHOLD 5.f
 #define RETURNING_BACK_OFF_DURATION 4000
 #define RETURNING_BACK_OFF_SPEED 0.3f
 #define RETURNING_DISPLACEMENT_SPEED_FAST 0.15f
@@ -401,6 +424,7 @@ enum Mode
 #define POI_TARGET_ANGLE 135.f
 #define POI_STOPPING_THRESHOLD 15.f
 #define POI_TURNING_STOPPING_THRESHOLD 0.001f
+#define POI_BRAITENBERG_STOPPING_THRESHOLD 0.001f
 #define POI_TURNING_REACTIVITY 0.01
 #define POI_TURNING_MAX_SPEED 0.5f
 #define POI_BRAITENBERG_TOF_MAX 50.f
@@ -422,7 +446,7 @@ enum Mode
 #define POI_BRAITENBERG_ANGLE_ERROR_FACTOR 0.01f
 #define POI_BRAITENBERG_MAX_SPEED 2.0f
 #define POI_BRAITENBERG_THRESHOLD 3000
-#define POI_BRAITENBERG_STOPPING_THRESHOLD 0.1f
+#define POI_BRAITENBERG_STOPPING_THRESHOLD 0.001f
 #define POI_BRAITENBERG_STOPPING_COUNT 16
 #define POI_BRAITENBERG_TARGET_REACHED_THRESHOLD 1.f
 
@@ -430,9 +454,9 @@ enum Mode
 static float POIS[8][2] =
 {
   {5.f, 1.f},
-  {5.f, 1.f},
   {6.f, 1.f},
   {6.f, 1.f},
+  {7.f, 1.f},
   {3.f, 1.f},
   {3.f, 1.f},
   {2.f, 1.f},
@@ -459,6 +483,8 @@ static float POIS_PLATFORM[8][2] =
 #define CORRECT_FOLLOWING_EMPTY_Y (0.25)
 #define CORRECT_FOLLOWING_SWALLOWED_X (0.3)
 #define CORRECT_FOLLOWING_SWALLOWED_Y (0.25)
+#define CORRECT_FOLLOWING_DROP_SWALLOWED_X (0.3)
+#define CORRECT_FOLLOWING_DROP_SWALLOWED_Y (0.25)
 #define CORRECT_RETURNING_SWALLOWED_X (0.25)
 #define CORRECT_RETURNING_SWALLOWED_Y (0.25)
 
@@ -466,6 +492,8 @@ static float POIS_PLATFORM[8][2] =
 #define CORRECT_FOLLOWING_Y (0.25)
 #define CORRECT_FOLLOWING_SLOPE_X (8. - 0.3)
 #define CORRECT_FOLLOWING_SLOPE_Y (8. - 0.3)
+#define CORRECT_FOLLOWING_DROP_SLOPE_X (8. - 0.3)
+#define CORRECT_FOLLOWING_DROP_SLOPE_Y (6. - 0.3)
 #define CORRECT_RETURNING_SLOPE_X (8. - 0.3)
 #define CORRECT_RETURNING_SLOPE_Y (8. - 0.3)
 #endif
@@ -502,8 +530,8 @@ static float POIS_PLATFORM[8][2] =
 
 /* Sensors */
 #define SENSOR_PROXIMITY_COUNT 10
-#define SENSOR_PROXIMITY_CALIBRATION_COUNT 40
-#define SENSOR_PROXIMITY_MEASUREMENT_COUNT 16
+#define SENSOR_PROXIMITY_CALIBRATION_COUNT 12
+#define SENSOR_PROXIMITY_MEASUREMENT_COUNT 6
 #define SENSOR_PROXIMITY_THRESHOLD 400
 #define SENSOR_PROXIMITY_RIGHT 0
 #define SENSOR_PROXIMITY_RIGHT_OFFSET 90
@@ -585,8 +613,10 @@ static float POIS_PLATFORM[8][2] =
 
 #define ACTUATOR_SERVO_BAR_RIGHT_OPEN 48
 #define ACTUATOR_SERVO_BAR_RIGHT_CLOSED 18
+#define ACTUATOR_SERVO_BAR_RIGHT_RAMP 22
 #define ACTUATOR_SERVO_BAR_LEFT_OPEN 132
 #define ACTUATOR_SERVO_BAR_LEFT_CLOSED 162
+#define ACTUATOR_SERVO_BAR_LEFT_RAMP 158
 
 #define FLAG_COUNT 21
 #define FLAG_EEPROM 0
@@ -686,13 +716,14 @@ enum State
   s_scanning,             //5 Look for bottles (obstacles) in close range
   s_following,            //6 Follow a wall
   s_following_slope,      //7 Follow a wall and go up the slope
-  s_following_collect,    //8 Follow a wall and wait at the slope
-  s_slope_down,           //9 Try to go down the slope
-  s_swallowing,           //10 Turning to have bottle in front and swallowing bottle
-  s_turning,              //11 Turns a given angle
-  s_returning,            //12 Returns to the recycling zone
-  s_emptying,             //13 Empty the robot
-  s_poi,                  //14 Go to a point of intereset
+  s_following_slope_drop, //8 Follow a wall and go down the slope
+  s_following_collect,    //9 Follow a wall and wait at the slope
+  s_slope_down,           //10 Try to go down the slope
+  s_swallowing,           //11 Turning to have bottle in front and swallowing bottle
+  s_turning,              //12 Turns a given angle
+  s_returning,            //13 Returns to the recycling zone
+  s_emptying,             //14 Empty the robot
+  s_poi,                  //15 Go to a point of intereset
 
   s_panic                 // Panic state, when something unexpected happened
 };
@@ -704,11 +735,12 @@ enum Mode
 {
   m_random_navigation,     //0 Wander randomly to find bottles in the field
   m_poi_navigation,        //1 Go to POI and search for bottles on the way there
-  m_platform,              //2 Go on the platform and search bottles there
-  m_collect,               //3 Go to the platform and receive bottles
-  m_test                   //4 Testing mode
+  m_platform_navigation,   //2 Got to the platform, do navigation and return
+  m_platform,              //3 Go on the platform and search bottles there
+  m_collect,               //4 Go to the platform and receive bottles
+  m_test                   //5 Testing mode
 };
-#define MODE_LENGTH 5
+#define MODE_LENGTH 6
 
 // s_wander
 #define WANDER_SPEED 0.4f
@@ -726,7 +758,7 @@ enum Mode
 #define WANDER_PROXIMITY_THRESHOLD 120
 #define WANDER_PROXIMITY_SIDE_THRESHOLD 140
 #define WANDER_PROXIMITY_HIGH_THRESHOLD 300
-#define WANDER_PROXIMITY_DOWN_THRESHOLD 80
+#define WANDER_PROXIMITY_DOWN_THRESHOLD 100
 #define WANDER_OFFSET 2000
 #define WANDER_OPEN_DURATION 500
 #define WANDER_DETECT_BOTTLE_THRESHOLD 240
@@ -764,6 +796,18 @@ enum Mode
 #define FOLLOWING_WALL_BACKWARD_SPEED 0.9f
 #define FOLLOWING_WALL_FORWARD_DURATION 1400
 #define FOLLOWING_WALL_BACKWARD_DURATION 1400
+#define FOLLOWING_DROP_SPEED 1.2
+#define FOLLOWING_DROP_DURATION 4000
+#define FOLLOWING_DROP_REACTIVITY 0.004
+#define FOLLOWING_DROP_DESIRED_WALL_DISTANCE 120
+#define FOLLOWING_DROP_MAX_SPEED 0.2f
+#define FOLLOWING_DROP_MIN_SPEED 0.15f
+#define FOLLOWING_DROP_ANGLE -90.f
+#define FOLLOWING_DROP_TURNING_STOPPING_THRESHOLD 5.f
+#define FOLLOWING_DROP_PITCH_THRESHOLD 3.f
+#define FOLLOWING_DROP_ROLL_THRESHOLD 3.f
+#define FOLLOWING_DROP_WIGGLE_DURATION 2000
+#define FOLLOWING_DROP_WIGGLE_SPEED 1.5f
 
 // s_slope_down
 #define SLOPE_DOWN_MAX_SPEED 0.4f
@@ -775,8 +819,8 @@ enum Mode
 #define SLOPE_DOWN_DESIRED_WALL_DISTANCE 120
 #define SLOPE_DOWN_REACTIVITY 0.001
 #define SLOPE_DOWN_STOPPING_THRESHOLD 0.001
-#define SLOPE_DOWN_PROXIMITY_DOWN_THRESHOLD 50
-#define SLOPE_DOWN_PROXIMITY_FORWARD_THRESHOLD 70
+#define SLOPE_DOWN_PROXIMITY_DOWN_THRESHOLD 80
+#define SLOPE_DOWN_PROXIMITY_FORWARD_THRESHOLD 120
 #define SLOPE_DOWN_BACK_SPEED 0.3f
 #define SLOPE_DOWN_BACK_DURATION 3000
 #define SLOPE_DOWN_BACK_DURATION_DELIVERED 3000
@@ -822,9 +866,11 @@ enum Mode
 
 // s_returning
 #define RETURNING_TARGET_ANGLE -135.f
-#define RETURNING_TARGET_ANGLE_PLATFORM 60.f
+#define RETURNING_TARGET_ANGLE_PLATFORM 90.f
 #define RETURNING_TARGET_ANGLE_PLATFORM_DEPART -90.f
-#define RETURNING_STOPPING_THRESHOLD 15.f
+#define RETURNING_TARGET_CLOSE_ANGLE -90.f
+#define RETURNING_TARGET_CLOSE_ANGLE_PLATFORM 0.f
+#define RETURNING_STOPPING_THRESHOLD 5.f
 #define RETURNING_TURNING_STOPPING_THRESHOLD 0.001f
 #define RETURNING_TURNING_REACTIVITY 0.01
 #define RETURNING_TURNING_MAX_SPEED 0.5f
@@ -851,7 +897,10 @@ enum Mode
 #define RETURNING_BRAITENBERG_STOPPING_COUNT 16
 #define RETURNING_BRAITENBERG_ZONE_TIMEOUT 7000
 #define RETURNING_GO_CLOSE_SPEED 0.2f
-#define RETURNING_GO_CLOSE_FRONT_THRESHOLD 200.f
+#define RETURNING_GO_CLOSE_FRONT_THRESHOLD 150.f
+#define RETURNING_GO_CLOSE_TIMEOUT 2000.f
+#define RETURNING_STRAIGHT_SPEED 0.4
+#define RETURNING_STRAIGHT_THRESHOLD 5.f
 #define RETURNING_BACK_OFF_DURATION 4000
 #define RETURNING_BACK_OFF_SPEED 0.3f
 #define RETURNING_DISPLACEMENT_SPEED_FAST 0.15f
@@ -869,6 +918,7 @@ enum Mode
 #define POI_TARGET_ANGLE 135.f
 #define POI_STOPPING_THRESHOLD 15.f
 #define POI_TURNING_STOPPING_THRESHOLD 0.001f
+#define POI_BRAITENBERG_STOPPING_THRESHOLD 0.001f
 #define POI_TURNING_REACTIVITY 0.01
 #define POI_TURNING_MAX_SPEED 0.5f
 #define POI_BRAITENBERG_TOF_MAX 50.f
@@ -890,7 +940,7 @@ enum Mode
 #define POI_BRAITENBERG_ANGLE_ERROR_FACTOR 0.01f
 #define POI_BRAITENBERG_MAX_SPEED 2.0f
 #define POI_BRAITENBERG_THRESHOLD 3000
-#define POI_BRAITENBERG_STOPPING_THRESHOLD 0.1f
+#define POI_BRAITENBERG_STOPPING_THRESHOLD 0.001f
 #define POI_BRAITENBERG_STOPPING_COUNT 16
 #define POI_BRAITENBERG_TARGET_REACHED_THRESHOLD 1.f
 
@@ -901,11 +951,11 @@ static float POIS[8][2] =
   {4.f, 3.f},
   {4.f, 3.f},
   {5.f, 3.f},
+  {6.f, 3.f},
+  {5.f, 4.f},
+  {5.f, 4.f},
+  {4.f, 3.f},
   {5.f, 3.f},
-  {4.f, 4.f},
-  {4.f, 4.f},
-  {5.f, 4.f},
-  {5.f, 4.f},
 };
 
 
@@ -929,6 +979,8 @@ static float POIS_PLATFORM[8][2] =
 #define CORRECT_FOLLOWING_EMPTY_Y (0.25)
 #define CORRECT_FOLLOWING_SWALLOWED_X (0.3)
 #define CORRECT_FOLLOWING_SWALLOWED_Y (0.25)
+#define CORRECT_FOLLOWING_DROP_SWALLOWED_X (0.3)
+#define CORRECT_FOLLOWING_DROP_SWALLOWED_Y (0.25)
 #define CORRECT_RETURNING_SWALLOWED_X (0.25)
 #define CORRECT_RETURNING_SWALLOWED_Y (0.25)
 
@@ -936,6 +988,8 @@ static float POIS_PLATFORM[8][2] =
 #define CORRECT_FOLLOWING_Y (0.25)
 #define CORRECT_FOLLOWING_SLOPE_X (8. - 0.3)
 #define CORRECT_FOLLOWING_SLOPE_Y (8. - 0.3)
+#define CORRECT_FOLLOWING_DROP_SLOPE_X (8. - 0.3)
+#define CORRECT_FOLLOWING_DROP_SLOPE_Y (6. - 0.3)
 #define CORRECT_RETURNING_SLOPE_X (8. - 0.3)
 #define CORRECT_RETURNING_SLOPE_Y (8. - 0.3)
 #endif
@@ -967,8 +1021,8 @@ static float POIS_PLATFORM[8][2] =
 
 /* Sensors */
 #define SENSOR_PROXIMITY_COUNT 10
-#define SENSOR_PROXIMITY_CALIBRATION_COUNT 40
-#define SENSOR_PROXIMITY_MEASUREMENT_COUNT 16
+#define SENSOR_PROXIMITY_CALIBRATION_COUNT 12
+#define SENSOR_PROXIMITY_MEASUREMENT_COUNT 6
 #define SENSOR_PROXIMITY_THRESHOLD 400
 #define SENSOR_PROXIMITY_RIGHT 0
 #define SENSOR_PROXIMITY_RIGHT_OFFSET 90
@@ -1048,10 +1102,12 @@ static float POIS_PLATFORM[8][2] =
 #define ACTUATOR_SERVO_BAR_LEFT 1
 #define ACTUATOR_SERVO_STEPS_PER_SECOND 120.f // steps/s
 
-#define ACTUATOR_SERVO_BAR_RIGHT_OPEN 38
-#define ACTUATOR_SERVO_BAR_RIGHT_CLOSED 12
-#define ACTUATOR_SERVO_BAR_LEFT_OPEN 142
-#define ACTUATOR_SERVO_BAR_LEFT_CLOSED 168
+#define ACTUATOR_SERVO_BAR_RIGHT_OPEN 44
+#define ACTUATOR_SERVO_BAR_RIGHT_CLOSED 24
+#define ACTUATOR_SERVO_BAR_RIGHT_RAMP 16
+#define ACTUATOR_SERVO_BAR_LEFT_OPEN 136
+#define ACTUATOR_SERVO_BAR_LEFT_CLOSED 162
+#define ACTUATOR_SERVO_BAR_LEFT_RAMP 158
 
 #define FLAG_COUNT 21
 #define FLAG_EEPROM 0
@@ -1151,13 +1207,14 @@ enum State
   s_scanning,             //5 Look for bottles (obstacles) in close range
   s_following,            //6 Follow a wall
   s_following_slope,      //7 Follow a wall and go up the slope
-  s_following_collect,    //8 Follow a wall and wait at the slope
-  s_slope_down,           //9 Try to go down the slope
-  s_swallowing,           //10 Turning to have bottle in front and swallowing bottle
-  s_turning,              //11 Turns a given angle
-  s_returning,            //12 Returns to the recycling zone
-  s_emptying,             //13 Empty the robot
-  s_poi,                  //14 Go to a point of intereset
+  s_following_slope_drop, //8 Follow a wall and go down the slope
+  s_following_collect,    //9 Follow a wall and wait at the slope
+  s_slope_down,           //10 Try to go down the slope
+  s_swallowing,           //11 Turning to have bottle in front and swallowing bottle
+  s_turning,              //12 Turns a given angle
+  s_returning,            //13 Returns to the recycling zone
+  s_emptying,             //14 Empty the robot
+  s_poi,                  //15 Go to a point of intereset
 
   s_panic                 // Panic state, when something unexpected happened
 };
@@ -1169,11 +1226,12 @@ enum Mode
 {
   m_random_navigation,     //0 Wander randomly to find bottles in the field
   m_poi_navigation,        //1 Go to POI and search for bottles on the way there
-  m_platform,              //2 Go on the platform and search bottles there
-  m_collect,               //3 Go to the platform and receive bottles
-  m_test                   //4 Testing mode
+  m_platform_navigation,   //2 Got to the platform, do navigation and return
+  m_platform,              //3 Go on the platform and search bottles there
+  m_collect,               //4 Go to the platform and receive bottles
+  m_test                   //5 Testing mode
 };
-#define MODE_LENGTH 5
+#define MODE_LENGTH 6
 
 // s_wander
 #define WANDER_SPEED 0.4f
@@ -1191,7 +1249,7 @@ enum Mode
 #define WANDER_PROXIMITY_THRESHOLD 120
 #define WANDER_PROXIMITY_SIDE_THRESHOLD 120
 #define WANDER_PROXIMITY_HIGH_THRESHOLD 300
-#define WANDER_PROXIMITY_DOWN_THRESHOLD 80
+#define WANDER_PROXIMITY_DOWN_THRESHOLD 100
 #define WANDER_OFFSET 2000
 #define WANDER_OPEN_DURATION 500
 #define WANDER_DETECT_BOTTLE_THRESHOLD 240
@@ -1200,18 +1258,18 @@ enum Mode
 #define WANDER_ROLL_THRESHOLD 10.f
 
 // s_following
-#define FOLLOWING_WALL_MAX_SPEED 0.6f
-#define FOLLOWING_WALL_MIN_SPEED 0.2f
+#define FOLLOWING_WALL_MAX_SPEED 0.3f
+#define FOLLOWING_WALL_MIN_SPEED 0.3f
 #define FOLLOWING_WALL_ENTER_SLOPE_SPEED 0.9f
-#define FOLLOWING_WALL_MAX_SPEED_ANGLE 90.f
+#define FOLLOWING_WALL_MAX_SPEED_ANGLE 60.f
 #define FOLLOWING_WALL_APPROACHING_FACTOR 0.6f
 #define FOLLOWING_WALL_RIGHT 0
 #define FOLLOWING_WALL_LEFT 0
 #define FOLLOWING_WALL_CORNER_DETECTED_THRESHOLD 200
-#define FOLLOWING_WALL_SLOPE_DETECTED_THRESHOLD 150
+#define FOLLOWING_WALL_SLOPE_DETECTED_THRESHOLD 200
 #define FOLLOWING_WALL_SLOPE_DONE_DETECTED_THRESHOLD 100
-#define FOLLOWING_WALL_DESIRED_WALL_DISTANCE 60
-#define FOLLOWING_WALL_REACTIVITY 0.001
+#define FOLLOWING_WALL_DESIRED_WALL_DISTANCE 90
+#define FOLLOWING_WALL_REACTIVITY 0.0005
 #define FOLLOWING_WALL_STOPPING_THRESHOLD 0.001
 #define FOLLOWING_WALL_PLATFORM_ARRIVE_ANGLE -135.f
 #define FOLLOWING_WALL_PLATFORM_ARRIVE_TURNING_STOPPING_THRESHOLD 0.001f
@@ -1229,6 +1287,19 @@ enum Mode
 #define FOLLOWING_WALL_BACKWARD_SPEED 0.9f
 #define FOLLOWING_WALL_FORWARD_DURATION 1400
 #define FOLLOWING_WALL_BACKWARD_DURATION 1400
+#define FOLLOWING_DROP_SPEED 1.2
+#define FOLLOWING_DROP_DURATION 4000
+#define FOLLOWING_DROP_REACTIVITY 0.004
+#define FOLLOWING_DROP_DESIRED_WALL_DISTANCE 120
+#define FOLLOWING_DROP_MAX_SPEED 0.2f
+#define FOLLOWING_DROP_MIN_SPEED 0.15f
+#define FOLLOWING_DROP_ANGLE -90.f
+#define FOLLOWING_DROP_TURNING_STOPPING_THRESHOLD 5.f
+#define FOLLOWING_DROP_PITCH_THRESHOLD 3.f
+#define FOLLOWING_DROP_ROLL_THRESHOLD 3.f
+#define FOLLOWING_DROP_WIGGLE_DURATION 2000
+#define FOLLOWING_DROP_WIGGLE_SPEED 1.5f
+
 
 // s_slope_down
 #define SLOPE_DOWN_MAX_SPEED 0.4f
@@ -1240,8 +1311,8 @@ enum Mode
 #define SLOPE_DOWN_DESIRED_WALL_DISTANCE 120
 #define SLOPE_DOWN_REACTIVITY 0.001
 #define SLOPE_DOWN_STOPPING_THRESHOLD 0.001
-#define SLOPE_DOWN_PROXIMITY_DOWN_THRESHOLD 50
-#define SLOPE_DOWN_PROXIMITY_FORWARD_THRESHOLD 70
+#define SLOPE_DOWN_PROXIMITY_DOWN_THRESHOLD 80
+#define SLOPE_DOWN_PROXIMITY_FORWARD_THRESHOLD 120
 #define SLOPE_DOWN_BACK_SPEED 0.3f
 #define SLOPE_DOWN_BACK_DURATION 3000
 #define SLOPE_DOWN_BACK_DURATION_DELIVERED 3000
@@ -1289,34 +1360,39 @@ enum Mode
 #define RETURNING_TARGET_ANGLE -135.f
 #define RETURNING_TARGET_ANGLE_PLATFORM 60.f
 #define RETURNING_TARGET_ANGLE_PLATFORM_DEPART -90.f
-#define RETURNING_STOPPING_THRESHOLD 15.f
+#define RETURNING_TARGET_CLOSE_ANGLE -90.f
+#define RETURNING_TARGET_CLOSE_ANGLE_PLATFORM 0.f
+#define RETURNING_STOPPING_THRESHOLD 5.f
 #define RETURNING_TURNING_STOPPING_THRESHOLD 0.001f
-#define RETURNING_TURNING_REACTIVITY 0.01
+#define RETURNING_TURNING_REACTIVITY 0.02
 #define RETURNING_TURNING_MAX_SPEED 0.5f
 #define RETURNING_BRAITENBERG_TOF_MAX 50.f
 #define RETURNING_BRAITENBERG_BIAS 0.6f
 #define RETURNING_BRAITENBERG_PROX_FORWARD_FACTOR -0.003f
-#define RETURNING_BRAITENBERG_PROX_FORWARD_LEFT_LEFT_FACTOR 0.005f
-#define RETURNING_BRAITENBERG_PROX_FORWARD_LEFT_RIGHT_FACTOR -0.003f
-#define RETURNING_BRAITENBERG_PROX_FORWARD_RIGHT_LEFT_FACTOR -0.003f
-#define RETURNING_BRAITENBERG_PROX_FORWARD_RIGHT_RIGHT_FACTOR 0.005f
+#define RETURNING_BRAITENBERG_PROX_FORWARD_LEFT_LEFT_FACTOR 0.0007f
+#define RETURNING_BRAITENBERG_PROX_FORWARD_LEFT_RIGHT_FACTOR -0.005f
+#define RETURNING_BRAITENBERG_PROX_FORWARD_RIGHT_LEFT_FACTOR -0.005f
+#define RETURNING_BRAITENBERG_PROX_FORWARD_RIGHT_RIGHT_FACTOR 0.0006f
 #define RETURNING_BRAITENBERG_PROX_LEFT_LEFT_FACTOR 0.0005f
 #define RETURNING_BRAITENBERG_PROX_LEFT_RIGHT_FACTOR -0.0005f
 #define RETURNING_BRAITENBERG_PROX_RIGHT_LEFT_FACTOR -0.0005f
 #define RETURNING_BRAITENBERG_PROX_RIGHT_RIGHT_FACTOR 0.0005f
- #define RETURNING_BRAITENBERG_TOF_FORWARD_FACTOR -0.004f
-#define RETURNING_BRAITENBERG_TOF_LEFT_LEFT_FACTOR -0.01f
-#define RETURNING_BRAITENBERG_TOF_LEFT_RIGHT_FACTOR 0.01f
-#define RETURNING_BRAITENBERG_TOF_RIGHT_LEFT_FACTOR 0.01f
-#define RETURNING_BRAITENBERG_TOF_RIGHT_RIGHT_FACTOR -0.01f
+#define RETURNING_BRAITENBERG_TOF_FORWARD_FACTOR -0.004f
+#define RETURNING_BRAITENBERG_TOF_LEFT_LEFT_FACTOR -0.02f
+#define RETURNING_BRAITENBERG_TOF_LEFT_RIGHT_FACTOR 0.02f
+#define RETURNING_BRAITENBERG_TOF_RIGHT_LEFT_FACTOR 0.02f
+#define RETURNING_BRAITENBERG_TOF_RIGHT_RIGHT_FACTOR -0.02f
 #define RETURNING_BRAITENBERG_ANGLE_ERROR_FACTOR 0.01f
 #define RETURNING_BRAITENBERG_MAX_SPEED 2.0f
 #define RETURNING_BRAITENBERG_THRESHOLD 3000
 #define RETURNING_BRAITENBERG_STOPPING_THRESHOLD 0.1f
-#define RETURNING_BRAITENBERG_ZONE_TIMEOUT 3000
+#define RETURNING_BRAITENBERG_ZONE_TIMEOUT 1000
 #define RETURNING_BRAITENBERG_STOPPING_COUNT 16
 #define RETURNING_GO_CLOSE_SPEED 0.2f
-#define RETURNING_GO_CLOSE_FRONT_THRESHOLD 200.f
+#define RETURNING_GO_CLOSE_FRONT_THRESHOLD 150.f
+#define RETURNING_GO_CLOSE_TIMEOUT 2000.f
+#define RETURNING_STRAIGHT_SPEED 0.4
+#define RETURNING_STRAIGHT_THRESHOLD 5.f
 #define RETURNING_BACK_OFF_DURATION 4000
 #define RETURNING_BACK_OFF_SPEED 0.3f
 #define RETURNING_DISPLACEMENT_SPEED_FAST 0.15f
@@ -1334,6 +1410,7 @@ enum Mode
 #define POI_TARGET_ANGLE 135.f
 #define POI_STOPPING_THRESHOLD 15.f
 #define POI_TURNING_STOPPING_THRESHOLD 0.001f
+#define POI_BRAITENBERG_STOPPING_THRESHOLD 0.001f
 #define POI_TURNING_REACTIVITY 0.01
 #define POI_TURNING_MAX_SPEED 0.5f
 #define POI_BRAITENBERG_TOF_MAX 50.f
@@ -1355,7 +1432,7 @@ enum Mode
 #define POI_BRAITENBERG_ANGLE_ERROR_FACTOR 0.01f
 #define POI_BRAITENBERG_MAX_SPEED 2.0f
 #define POI_BRAITENBERG_THRESHOLD 3000
-#define POI_BRAITENBERG_STOPPING_THRESHOLD 0.1f
+#define POI_BRAITENBERG_STOPPING_THRESHOLD 0.001f
 #define POI_BRAITENBERG_STOPPING_COUNT 16
 #define POI_BRAITENBERG_TARGET_REACHED_THRESHOLD 1.f
 
@@ -1374,9 +1451,9 @@ enum Mode
 
 static float POIS[8][2] =
 {
+  {2.5f, 2.f},
   {2.5f, 2.5f},
   {2.5f, 2.5f},
-  {2.5f, 3.f},
   {3.f, 2.f},
   {3.f, 2.f},
   {3.f, 3.f},
@@ -1405,6 +1482,8 @@ static float POIS_PLATFORM[8][2] =
 #define CORRECT_FOLLOWING_EMPTY_Y (0.25)
 #define CORRECT_FOLLOWING_SWALLOWED_X (0.3)
 #define CORRECT_FOLLOWING_SWALLOWED_Y (0.25)
+#define CORRECT_FOLLOWING_DROP_SWALLOWED_X (0.3)
+#define CORRECT_FOLLOWING_DROP_SWALLOWED_Y (0.25)
 #define CORRECT_RETURNING_SWALLOWED_X (0.25)
 #define CORRECT_RETURNING_SWALLOWED_Y (0.25)
 
@@ -1412,6 +1491,8 @@ static float POIS_PLATFORM[8][2] =
 #define CORRECT_FOLLOWING_Y (0.25)
 #define CORRECT_FOLLOWING_SLOPE_X (8. - 0.3)
 #define CORRECT_FOLLOWING_SLOPE_Y (8. - 0.3)
+#define CORRECT_FOLLOWING_DROP_SLOPE_X (8. - 0.3)
+#define CORRECT_FOLLOWING_DROP_SLOPE_Y (6. - 0.3)
 #define CORRECT_RETURNING_SLOPE_X (8. - 0.3)
 #define CORRECT_RETURNING_SLOPE_Y (8. - 0.3)
 #endif

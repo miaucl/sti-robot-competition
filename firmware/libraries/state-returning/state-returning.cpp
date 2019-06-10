@@ -25,9 +25,11 @@ enum IState
   is_turn_start,
   is_turning,
   is_turn_stopping,
+  is_straight,
   is_braitenberg,
   is_back_off_start,
   is_back_off,
+  is_orienting,
   is_back_go_close,
   is_back_go_close_stopping,
   is_back_turn_start,
@@ -49,6 +51,7 @@ static int proxDownRightZero = 0;
 
 static long braitenbergTimestamp = 0;
 static long back_off_timestamp = 0;
+static long goCloseTimestamp = 0;
 
 static boolean enteredZone = 0;
 static long returningTimeout = false;
@@ -57,7 +60,7 @@ static long displacementTimestamp = 0;
 static int directionalSpeedCount = 0;
 
 static float zone[4] = {-1,-1,1,1};
-static float zonePlatform[4] = {7,7,9,9};
+static float zonePlatform[4] = {7.5,7.5,8.5,8.5};
 
 void stateReturningEnterRoutine(boolean ledState[LED_COUNT],
                                 boolean flags[FLAG_COUNT])
@@ -185,7 +188,42 @@ void stateReturningRoutine( int proximityMeasurements[SENSOR_PROXIMITY_COUNT][SE
 
       braitenbergTimestamp = millis();
 
-      is_state = is_braitenberg;
+      if (flags[FLAG_ON_PLATFORM])
+      {
+        is_state = is_straight;
+
+        motorSpeeds[ACTUATOR_MOTOR_RIGHT] = RETURNING_STRAIGHT_SPEED;
+        motorSpeeds[ACTUATOR_MOTOR_LEFT] = RETURNING_STRAIGHT_SPEED;
+        writeRawMotorSpeed(motorSpeeds, ACTUATOR_MOTOR_RIGHT, ACTUATOR_MOTOR_RIGHT_DIRECTION_PIN, ACTUATOR_MOTOR_RIGHT_SPEED_PIN);
+        writeRawMotorSpeed(motorSpeeds, ACTUATOR_MOTOR_LEFT, ACTUATOR_MOTOR_LEFT_DIRECTION_PIN, ACTUATOR_MOTOR_LEFT_SPEED_PIN);
+      }
+      else
+      {
+        is_state = is_braitenberg;
+      }
+    }
+  }
+  else if (is_state == is_straight)
+  {
+    // Forward tof sensor
+    float tofCenter = getFilteredAverageTOFValue(tofMeasurements, SENSOR_TOF_CENTER);
+
+    #ifdef SERIAL_ENABLE
+    Serial.print("tof: ");
+    Serial.print(tofCenter);
+    #endif
+
+
+    if (tofCenter > 0 && tofCenter < RETURNING_GO_CLOSE_FRONT_THRESHOLD)
+    {
+      motorSpeeds[ACTUATOR_MOTOR_RIGHT] = 0;
+      motorSpeeds[ACTUATOR_MOTOR_LEFT] = 0;
+      writeMotorSpeed(motorSpeeds, ACTUATOR_MOTOR_RIGHT, ACTUATOR_MOTOR_RIGHT_DIRECTION_PIN, ACTUATOR_MOTOR_RIGHT_SPEED_PIN);
+      writeMotorSpeed(motorSpeeds, ACTUATOR_MOTOR_LEFT, ACTUATOR_MOTOR_LEFT_DIRECTION_PIN, ACTUATOR_MOTOR_LEFT_SPEED_PIN);
+
+      flags[FLAG_RETURNED] = 1;
+
+      is_state = is_off;
     }
   }
   else if (is_state == is_braitenberg)
@@ -311,8 +349,8 @@ void stateReturningRoutine( int proximityMeasurements[SENSOR_PROXIMITY_COUNT][SE
         Serial.print(proxRight);
         #endif
 
-        // Move a bit
-        if (proxForward > proxLeft && proxForward > proxRight)
+        // Move a bit (not on platform)
+        if (proxForward > proxLeft && proxForward > proxRight && !flags[FLAG_ON_PLATFORM])
         {
           #ifdef SERIAL_ENABLE
           Serial.print(" > displace");
@@ -326,7 +364,7 @@ void stateReturningRoutine( int proximityMeasurements[SENSOR_PROXIMITY_COUNT][SE
           Serial.print(" > stopping");
           #endif
 
-          is_state = is_back_go_close;
+          is_state = is_orienting;
         }
       }
     }
@@ -334,7 +372,7 @@ void stateReturningRoutine( int proximityMeasurements[SENSOR_PROXIMITY_COUNT][SE
     {
       directionalSpeedCount = 0;
 
-      if (flags[FLAG_POI_NAVIGATION])
+      if (flags[FLAG_POI_NAVIGATION] || flags[FLAG_ON_PLATFORM])
       {
         float returnZone[4] = {};
         returnZone[0] = (flags[FLAG_ON_PLATFORM]) ? zonePlatform[0] : zone[0];
@@ -362,7 +400,7 @@ void stateReturningRoutine( int proximityMeasurements[SENSOR_PROXIMITY_COUNT][SE
           writeMotorSpeed(motorSpeeds, ACTUATOR_MOTOR_RIGHT, ACTUATOR_MOTOR_RIGHT_DIRECTION_PIN, ACTUATOR_MOTOR_RIGHT_SPEED_PIN);
           writeMotorSpeed(motorSpeeds, ACTUATOR_MOTOR_LEFT, ACTUATOR_MOTOR_LEFT_DIRECTION_PIN, ACTUATOR_MOTOR_LEFT_SPEED_PIN);
 
-          is_state = is_back_go_close_stopping;
+          is_state = is_orienting;
         }
       }
     }
@@ -460,6 +498,38 @@ void stateReturningRoutine( int proximityMeasurements[SENSOR_PROXIMITY_COUNT][SE
       is_state = is_turn_start;
     }
   }
+  else if (is_state == is_orienting)
+  {
+    float error = wrapPI(estimatedAngle - ((flags[FLAG_ON_PLATFORM]) ? RETURNING_TARGET_CLOSE_ANGLE_PLATFORM : RETURNING_TARGET_CLOSE_ANGLE));
+    float turningSpeed = error * RETURNING_TURNING_REACTIVITY;
+    turningSpeed = max(turningSpeed, -RETURNING_TURNING_MAX_SPEED);
+    turningSpeed = min(turningSpeed, RETURNING_TURNING_MAX_SPEED);
+    #ifdef SERIAL_ENABLE
+    Serial.print("orienting: ");
+    Serial.print(error);
+    Serial.print(", ");
+    Serial.print(turningSpeed);
+    #endif
+
+    motorSpeeds[ACTUATOR_MOTOR_RIGHT] = -turningSpeed;
+    motorSpeeds[ACTUATOR_MOTOR_LEFT] = turningSpeed;
+    writeRawMotorSpeed(motorSpeeds, ACTUATOR_MOTOR_RIGHT, ACTUATOR_MOTOR_RIGHT_DIRECTION_PIN, ACTUATOR_MOTOR_RIGHT_SPEED_PIN);
+    writeRawMotorSpeed(motorSpeeds, ACTUATOR_MOTOR_LEFT, ACTUATOR_MOTOR_LEFT_DIRECTION_PIN, ACTUATOR_MOTOR_LEFT_SPEED_PIN);
+
+    if (fabsf(error) < RETURNING_STOPPING_THRESHOLD)
+    {
+      #ifdef SERIAL_ENABLE
+      Serial.print(" > stopping");
+      #endif
+      motorSpeeds[ACTUATOR_MOTOR_RIGHT] = 0;
+      motorSpeeds[ACTUATOR_MOTOR_LEFT] = 0;
+      writeMotorSpeed(motorSpeeds, ACTUATOR_MOTOR_RIGHT, ACTUATOR_MOTOR_RIGHT_DIRECTION_PIN, ACTUATOR_MOTOR_RIGHT_SPEED_PIN);
+      writeMotorSpeed(motorSpeeds, ACTUATOR_MOTOR_LEFT, ACTUATOR_MOTOR_LEFT_DIRECTION_PIN, ACTUATOR_MOTOR_LEFT_SPEED_PIN);
+
+      goCloseTimestamp = millis();
+      is_state = is_back_go_close;
+    }
+  }
   else if (is_state == is_back_go_close)
   {
     // Forward prox sensor
@@ -475,7 +545,7 @@ void stateReturningRoutine( int proximityMeasurements[SENSOR_PROXIMITY_COUNT][SE
     writeRawMotorSpeed(motorSpeeds, ACTUATOR_MOTOR_RIGHT, ACTUATOR_MOTOR_RIGHT_DIRECTION_PIN, ACTUATOR_MOTOR_RIGHT_SPEED_PIN);
     writeRawMotorSpeed(motorSpeeds, ACTUATOR_MOTOR_LEFT, ACTUATOR_MOTOR_LEFT_DIRECTION_PIN, ACTUATOR_MOTOR_LEFT_SPEED_PIN);
 
-    if (proxForward > RETURNING_GO_CLOSE_FRONT_THRESHOLD)
+    if (proxForward > RETURNING_GO_CLOSE_FRONT_THRESHOLD || millis() - goCloseTimestamp > RETURNING_GO_CLOSE_TIMEOUT)
     {
       #ifdef SERIAL_ENABLE
       Serial.print(" > close enough");
@@ -534,7 +604,7 @@ void stateReturningRoutine( int proximityMeasurements[SENSOR_PROXIMITY_COUNT][SE
     writeRawMotorSpeed(motorSpeeds, ACTUATOR_MOTOR_RIGHT, ACTUATOR_MOTOR_RIGHT_DIRECTION_PIN, ACTUATOR_MOTOR_RIGHT_SPEED_PIN);
     writeRawMotorSpeed(motorSpeeds, ACTUATOR_MOTOR_LEFT, ACTUATOR_MOTOR_LEFT_DIRECTION_PIN, ACTUATOR_MOTOR_LEFT_SPEED_PIN);
 
-    if (fabsf(error) < RETURNING_TURNING_STOPPING_THRESHOLD)
+    if (fabsf(error) < RETURNING_STOPPING_THRESHOLD)
     {
       #ifdef SERIAL_ENABLE
       Serial.print(" > stopping");
@@ -553,13 +623,26 @@ void stateReturningRoutine( int proximityMeasurements[SENSOR_PROXIMITY_COUNT][SE
     if (fabsf(motorSpeedMeasurements[ACTUATOR_MOTOR_LEFT]) < RETURNING_TURNING_STOPPING_THRESHOLD &&
         fabsf(motorSpeedMeasurements[ACTUATOR_MOTOR_RIGHT]) < RETURNING_TURNING_STOPPING_THRESHOLD)
     {
-      #ifdef SERIAL_ENABLE
-      Serial.print(" stopped");
-      #endif
+      float error = wrapPI(estimatedAngle - ((flags[FLAG_ON_PLATFORM]) ? RETURNING_TARGET_ANGLE_PLATFORM_DEPART : RETURNING_TARGET_ANGLE));
+      if (fabsf(error) >= RETURNING_STOPPING_THRESHOLD)
+      {
+        #ifdef SERIAL_ENABLE
+        Serial.print(" not good enough: ");
+        Serial.print(error);
+        #endif
 
-      flags[FLAG_RETURNED] = 1;
+        is_state = is_back_turn_start;
+      }
+      else
+      {
+        #ifdef SERIAL_ENABLE
+        Serial.print(" stopped");
+        #endif
 
-      is_state = is_off;
+        flags[FLAG_RETURNED] = 1;
+
+        is_state = is_off;
+      }
     }
   }
 

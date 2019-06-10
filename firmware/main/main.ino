@@ -11,9 +11,10 @@
 #include "logger.h"
 #include "state-estimator.h"
 #include "state-machine.h"
+
 #include "state-following.h"
 #include "state-following-slope.h" 
-
+#include "state-following-slope-drop.h" 
 #include "state-following-collect.h"
 #include "state-slope-down.h"
 #include "state-wander.h"
@@ -32,6 +33,7 @@
 // Mode of the robot
 //int mode = m_random_navigation;
 int mode = m_poi_navigation;
+//int mode = m_platform_navigation;
 //int mode = m_platform;
 //int mode = m_collect;
 //int mode = m_test;
@@ -300,6 +302,7 @@ void loop()
       case s_test: stateTestExit(); break;
       case s_following: stateFollowingExit(); break;
       case s_following_slope: stateFollowingSlopeExit(); break;
+      case s_following_slope_drop: stateFollowingSlopeDropExit(); break;
       case s_following_collect: stateFollowingCollectExit(); break;
       case s_slope_down: stateSlopeDownExit(); break;
       case s_swallowing: stateSwallowingExit(); break;
@@ -320,6 +323,7 @@ void loop()
       case s_test: stateTestEnter(); break;
       case s_following: stateFollowingEnter(); break;
       case s_following_slope: stateFollowingSlopeEnter(); break;
+      case s_following_slope_drop: stateFollowingSlopeDropEnter(); break;
       case s_following_collect: stateFollowingCollectEnter(); break;
       case s_slope_down: stateSlopeDownEnter(); break;
       case s_swallowing: stateSwallowingEnter(); break;
@@ -355,6 +359,7 @@ void loop()
       case s_test: stateTest(); break;
       case s_following: stateFollowing(); break;
       case s_following_slope: stateFollowingSlope(); break;
+      case s_following_slope_drop: stateFollowingSlopeDrop(); break;
       case s_following_collect: stateFollowingCollect(); break;
       case s_slope_down: stateSlopeDown(); break;
       case s_swallowing: stateSwallowing(); break;
@@ -776,6 +781,39 @@ void stateFollowingSlope()
 void stateFollowingSlopeExit()
 {
   stateFollowingSlopeExitRoutine(ledState, flags);
+}
+// ================================================================
+// ===                 FOLLOWING SLOPE DROP STATE               ===
+// ================================================================
+
+
+// The "s_following_slope_drop" state
+void stateFollowingSlopeDropEnter()
+{
+  stateFollowingSlopeDropEnterRoutine(ledState, flags);
+}
+
+void stateFollowingSlopeDrop()
+{
+  stateFollowingSlopeDropRoutine( proximityMeasurements,
+                                  proximityAmbientMeasurements,
+                                  proximityAmbientVarianceMeasurements,
+                                  tofMeasurements,
+                                  estimator.getAngle(),
+                                  imuMeasurements,
+                                  motorSpeeds,
+                                  motorSpeedMeasurements,
+                                  servoAngles,
+                                  btnState,
+                                  ledState,
+                                  flags);
+
+  updateAll();
+}
+
+void stateFollowingSlopeDropExit()
+{
+  stateFollowingSlopeDropExitRoutine(ledState, flags);
 }
 
 // ================================================================

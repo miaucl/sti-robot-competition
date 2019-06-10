@@ -343,8 +343,8 @@ void statePOIRoutine( int proximityMeasurements[SENSOR_PROXIMITY_COUNT][SENSOR_P
   else if (is_state == is_stopping)
   {
 
-    if (fabsf(motorSpeedMeasurements[ACTUATOR_MOTOR_LEFT]) < POI_STOPPING_THRESHOLD &&
-        fabsf(motorSpeedMeasurements[ACTUATOR_MOTOR_RIGHT]) < POI_STOPPING_THRESHOLD)
+    if (fabsf(motorSpeedMeasurements[ACTUATOR_MOTOR_LEFT]) < POI_BRAITENBERG_STOPPING_THRESHOLD &&
+        fabsf(motorSpeedMeasurements[ACTUATOR_MOTOR_RIGHT]) < POI_BRAITENBERG_STOPPING_THRESHOLD)
     {
       #ifdef SERIAL_ENABLE
       Serial.print(" stopped");

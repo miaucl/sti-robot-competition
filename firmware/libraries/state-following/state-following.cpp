@@ -10,6 +10,7 @@
 #include "actuators.h"
 
 #define USE_RIGHT_WALL 1
+#define USE_RIGHT_WALL_PLATFORM 0
 
 // Internal control flags
 enum IState
@@ -94,7 +95,7 @@ void stateFollowingRoutine(int proximityMeasurements[SENSOR_PROXIMITY_COUNT][SEN
 
       // determine if wall on the left or right is to follow
       //if (proxLookRight > proxLookLeft)
-      if (USE_RIGHT_WALL)
+      if (((!flags[FLAG_ON_PLATFORM]) ? USE_RIGHT_WALL : USE_RIGHT_WALL_PLATFORM))
       {
         #ifdef SERIAL_ENABLE
         Serial.print(" > wall: right");
