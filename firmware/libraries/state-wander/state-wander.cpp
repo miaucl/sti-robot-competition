@@ -13,7 +13,6 @@
 enum IState
 {
   is_start,
-  is_open,
   is_forward,
   is_stopping,
   is_turn_start,
